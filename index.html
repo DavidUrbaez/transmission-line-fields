@@ -25,25 +25,76 @@
   #panel h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8fa0b8; }
   .mode-row { display: flex; gap: 6px; margin-bottom: 12px; }
   .mode-btn { flex: 1; padding: 7px 0; font-size: 12.5px; font-weight: 600; border-radius: 6px; border: 1px solid #2c3850; background: #141a26; color: #93a0b4; cursor: pointer; }
-  #btnE.active { background: #4a2a10; border-color: #b06a2a; color: #ffd9a8; }
+  #btnE.active { background: #12352a; border-color: #35b779; color: #c9f2d4; }
   #btnB.active { background: #10304a; border-color: #2a7ab0; color: #a8dcff; }
   .ctl { margin-bottom: 9px; }
   .ctl label { display: flex; justify-content: space-between; font-size: 11.5px; color: #aeb9c9; margin-bottom: 3px; }
   .ctl label b { color: #e8eef6; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .ctl input[type=range] { width: 100%; accent-color: #4a8fdd; height: 18px; }
+  .ctl input[type=range] { width: 100%; }
+
+  /* custom range styling: thin filled track + round thumb */
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
+                      background: #232d3d; outline: none; cursor: pointer; margin: 6px 0; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%; background: #eaf2fc;
+    border: 3px solid #4a8fdd; box-shadow: 0 1px 5px rgba(0,0,0,0.55); }
+  input[type=range]:hover::-webkit-slider-thumb { background: #ffffff; }
+  input[type=range]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%;
+    background: #eaf2fc; border: 3px solid #4a8fdd; }
+  input[type=range]::-moz-range-progress { background: #4a8fdd; height: 6px; border-radius: 3px; }
   .check-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #aeb9c9; margin: 8px 0 0; }
   #readout { margin-top: 10px; padding-top: 9px; border-top: 1px solid #222c3b; font-size: 11.5px; color: #93a0b4; line-height: 1.7; }
   #readout b { color: #ffd479; font-weight: 600; }
 
-  #chartBox { left: 16px; bottom: 14px; background: rgba(13,17,26,0.85); border: 1px solid #26303f; border-radius: 8px; padding: 8px 10px 6px; }
+  #modeBox { top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px;
+             background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 6px; }
+  #modeBox .mode-btn { width: 96px; }
+
+  #chips { left: 16px; bottom: 14px; display: flex; gap: 8px; }
+  .chip { padding: 7px 12px; font-size: 12px; font-weight: 600; border-radius: 8px;
+          border: 1px solid #2c3850; background: rgba(13,17,26,0.88); color: #93a0b4; cursor: pointer; }
+  .chip.active { background: #1d3a63; border-color: #3d6cb0; color: #eaf1fa; }
+
+  #chartBox { left: 16px; bottom: 54px; background: rgba(13,17,26,0.85); border: 1px solid #26303f; border-radius: 8px; padding: 8px 10px 6px; }
   #chartTitle { font-size: 11px; color: #aeb9c9; margin-bottom: 4px; }
   #chartCanvas { width: 340px; height: 130px; }
+  #chartRow { display: flex; align-items: center; gap: 10px; }
+  #probeCol { display: flex; flex-direction: column; align-items: center; gap: 7px;
+              font-size: 10px; color: #8fa0b8; }
+  #probeCol b { color: #e8eef6; font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #probeSlider { writing-mode: vertical-lr; direction: rtl; width: 6px; height: 96px; margin: 0; }
 
   #phasorBox { right: 14px; bottom: 34px; background: rgba(13,17,26,0.85); border: 1px solid #26303f; border-radius: 8px; padding: 8px 10px 5px; }
   #phasorTitle { font-size: 11px; color: #aeb9c9; margin-bottom: 3px; text-align: center; }
   #phasorCanvas { width: 150px; height: 150px; }
 
   #hint { bottom: 14px; right: 190px; font-size: 11px; color: #5d6a7d; pointer-events: none; }
+
+  #panelHead { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+  #panelChevron { display: inline-block; transition: transform 0.2s; font-size: 11px; }
+  #panel.collapsed #panelBody { display: none; }
+  #panel.collapsed { padding-bottom: 10px; }
+  #panel.collapsed #panelChevron { transform: rotate(-90deg); }
+
+  /* ---- small screens: bottom-sheet panel, scaled overlays ---- */
+  @media (max-width: 700px), (max-height: 540px) {
+    #title h1 { font-size: 14px; }
+    #title p { font-size: 10px; max-width: 60vw; }
+    #legend { top: 56px; padding: 7px 9px; }
+    #legendCanvas { width: 12px; height: 92px; }
+    #legendNote { display: none; }
+    #panel { top: auto; left: 8px; right: 8px; bottom: 0; width: auto;
+             max-height: 52vh; overflow-y: auto; border-radius: 12px 12px 0 0;
+             padding: 10px 14px; }
+    input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+    #modeBox { top: 8px; left: auto; right: 8px; transform: none; padding: 4px; }
+    #modeBox .mode-btn { width: 72px; padding: 6px 0; }
+    #chips { left: 8px; bottom: 58px; }
+    #chartBox { left: 8px; bottom: 98px; padding: 6px 8px 4px; }
+    #chartCanvas { width: min(300px, calc(100vw - 118px)); height: auto; aspect-ratio: 680 / 260; }
+    #phasorBox { right: 8px; bottom: 98px; }
+    #hint { display: none; }
+  }
 </style>
 <script type="importmap">
 {
@@ -62,6 +113,11 @@
   <p>Instantaneous field on the cross-section plane at midspan, animated at slowed-down 60&nbsp;Hz</p>
 </div>
 
+<div id="modeBox" class="overlay">
+  <button id="btnE" class="mode-btn active">E field</button>
+  <button id="btnB" class="mode-btn">B field</button>
+</div>
+
 <div id="legend" class="overlay">
   <div id="legendTitle">|E| field</div>
   <div class="bar-row">
@@ -72,11 +128,8 @@
 </div>
 
 <div id="panel" class="overlay">
-  <h2>Line Parameters</h2>
-  <div class="mode-row">
-    <button id="btnE" class="mode-btn active">E field</button>
-    <button id="btnB" class="mode-btn">B field</button>
-  </div>
+  <h2 id="panelHead">Configuration <span id="panelChevron">▾</span></h2>
+  <div id="panelBody">
   <div class="ctl"><label>Voltage (L-L, rms) <b id="vVal"></b></label>
     <input type="range" id="vSlider" min="69" max="765" step="1" value="345"></div>
   <div class="ctl"><label>Current per phase (rms) <b id="iVal"></b></label>
@@ -85,23 +138,45 @@
     <input type="range" id="sSlider" min="4" max="15" step="0.5" value="9"></div>
   <div class="ctl"><label>Conductor height (midspan) <b id="hVal"></b></label>
     <input type="range" id="hSlider" min="8" max="35" step="0.5" value="20"></div>
+  <div class="ctl"><label>Sag (midspan) <b id="sagVal"></b></label>
+    <input type="range" id="sagSlider" min="3" max="25" step="0.5" value="7"></div>
   <div class="ctl"><label>Subconductors per bundle <b id="nVal"></b></label>
     <input type="range" id="nSlider" min="1" max="4" step="1" value="2"></div>
   <div class="ctl"><label>Bundle spacing <b id="bVal"></b></label>
     <input type="range" id="bSlider" min="20" max="60" step="1" value="45"></div>
+  <div class="ctl"><label>Subconductor diameter <b id="dVal"></b></label>
+    <input type="range" id="dSlider" min="10" max="50" step="0.1" value="25.1"></div>
   <div class="ctl"><label>Animation speed <b id="aVal"></b></label>
     <input type="range" id="aSlider" min="0" max="1" step="0.05" value="0.25"></div>
+  <div class="ctl"><label>Cross-section position <b id="zVal"></b></label>
+    <input type="range" id="zSlider" min="-130" max="130" step="1" value="0"></div>
+  <h2 style="margin-top:12px">View</h2>
+  <div class="check-row"><input type="checkbox" id="planeChk" checked><label for="planeChk">Cross-section plane (2D)</label></div>
+  <div class="check-row"><input type="checkbox" id="cloudChk" checked><label for="cloudChk">3D field arrows (volume)</label></div>
   <div class="check-row"><input type="checkbox" id="arrowsChk" checked><label for="arrowsChk">Field direction arrows</label></div>
   <div class="check-row"><input type="checkbox" id="shieldChk" checked><label for="shieldChk">Shield wires (grounded, in E-field solve)</label></div>
   <div id="readout"></div>
+  </div>
 </div>
 
 <div id="chartBox" class="overlay">
   <div id="chartTitle"></div>
-  <canvas id="chartCanvas" width="680" height="260"></canvas>
+  <div id="chartRow">
+    <canvas id="chartCanvas" width="680" height="260"></canvas>
+    <div id="probeCol">
+      <b id="probeVal">1 m</b>
+      <input type="range" id="probeSlider" orient="vertical" min="0" max="10" step="0.25" value="1">
+      <span>height</span>
+    </div>
+  </div>
 </div>
 
-<div id="phasorBox" class="overlay">
+<div id="chips" class="overlay">
+  <button id="chipChart" class="chip active">Field profile</button>
+  <button id="chipPhasor" class="chip">Phase voltages</button>
+</div>
+
+<div id="phasorBox" class="overlay" style="display:none">
   <div id="phasorTitle">Phase voltages</div>
   <canvas id="phasorCanvas" width="300" height="300"></canvas>
 </div>
@@ -111,17 +186,15 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---------------------------------------------------------------- constants
 const EPS0 = 8.854187817e-12;
 const MU0  = 4 * Math.PI * 1e-7;
-const COND_RADIUS = 0.015;        // phase subconductor radius (m), used in P matrix
 const SHIELD_RADIUS = 0.006;      // shield wire radius (m)
 const MAXC = 14;                  // shader-side max conductors (3 phases x 4 + 2 shields)
 
 const SPAN = 260;                 // tower-to-tower span (m); field plane sits at midspan z=0
-const SAG = 7;                    // conductor sag (m)
-const SHIELD_SAG = 5.2;
 const INS_LEN = 3.4;              // insulator string vertical extent (m)
 const PHASE_ANGLES = [0, -2 * Math.PI / 3, 2 * Math.PI / 3];
 const PHASE_COLORS = ['#ffb04d', '#63d8cf', '#b58cff'];
@@ -139,14 +212,18 @@ const state = {
   height: 20,                     // conductor height at MIDSPAN (where the field plane is)
   nSub: 2,
   bundleSpacing: 0.45,
+  condDiam: 25.1,                 // subconductor diameter (mm), used in the P matrix
+  sag: 7,                         // conductor sag at midspan (m)
   visHz: 0.25,
+  planeZ: 0,                      // cross-section position along the middle span
+  probeH: 1,                      // probe height for the field profile chart (m)
   showArrows: true,
   shieldWires: true,
 };
 
 // derived geometry, shared by physics and visuals
 function geom() {
-  const hAtt = state.height + SAG;              // conductor attach height at tower
+  const hAtt = state.height + state.sag;        // conductor attach height at tower
   const armY = hAtt + INS_LEN;                  // crossarm bottom chord
   const armTop = armY + 1.7;
   const throatY = hAtt - 3.0;                   // column top: below the center conductor
@@ -154,9 +231,10 @@ function geom() {
   // proportions: ~3.5 m live clearance from center phase to tower steel)
   const xCup = Math.min(7.5, Math.max(3.2, state.spacing * 0.62));
   const shieldX = state.spacing * 0.72;
+  const shieldSag = state.sag * 0.75;           // shield wires are strung tighter
   const shieldPeakY = armTop + 3.9;             // shield attach at tower
-  const shieldMidY = shieldPeakY - SHIELD_SAG;  // shield height at midspan (physics)
-  return { hAtt, armY, armTop, throatY, xCup, shieldX, shieldPeakY, shieldMidY };
+  const shieldMidY = shieldPeakY - shieldSag;   // shield height at midspan (physics)
+  return { hAtt, armY, armTop, throatY, xCup, shieldX, shieldSag, shieldPeakY, shieldMidY };
 }
 
 let conductors = [];   // [{x, y, radius, shield, vRe, vIm, iRe, iIm, qRe, qIm}] at midspan
@@ -202,12 +280,19 @@ function solveLine() {
   const Ipk = state.iRms * Math.sqrt(2) / state.nSub;
   const offs = bundleOffsets();
 
+  // conductor heights at the cross-section's position along the span (sag)
+  const HS = SPAN / 2;
+  const sagT = 1 - (state.planeZ / HS) ** 2;    // 1 at midspan, 0 at the towers
+  const condY = g.hAtt - state.sag * sagT;
+  const shieldY = g.shieldPeakY - g.shieldSag * sagT;
+  const condRadius = state.condDiam / 2000;     // mm diameter -> m radius
+
   conductors = [];
   for (let ph = 0; ph < 3; ph++) {
     const cx = (ph - 1) * state.spacing;
     for (const [ox, oy] of offs) {
       conductors.push({
-        x: cx + ox, y: state.height + oy, radius: COND_RADIUS, shield: false,
+        x: cx + ox, y: condY + oy, radius: condRadius, shield: false,
         vRe: Vpk * Math.cos(PHASE_ANGLES[ph]), vIm: Vpk * Math.sin(PHASE_ANGLES[ph]),
         iRe: Ipk * Math.cos(PHASE_ANGLES[ph]), iIm: Ipk * Math.sin(PHASE_ANGLES[ph]),
         qRe: 0, qIm: 0,
@@ -217,7 +302,7 @@ function solveLine() {
   if (state.shieldWires) {
     for (const sx of [-g.shieldX, g.shieldX]) {
       conductors.push({
-        x: sx, y: g.shieldMidY, radius: SHIELD_RADIUS, shield: true,
+        x: sx, y: shieldY, radius: SHIELD_RADIUS, shield: true,
         vRe: 0, vIm: 0, iRe: 0, iIm: 0, qRe: 0, qIm: 0,   // grounded; induced charge from the solve
       });
     }
@@ -286,10 +371,10 @@ function rmsAt(x, y, mode) {
   return Math.sqrt((fxRe * fxRe + fxIm * fxIm + fyRe * fyRe + fyIm * fyIm) / 2);
 }
 
-// ---------------------------------------------------------------- colormaps (E = ember, B = ice)
+// ---------------------------------------------------------------- colormaps (E = viridis, B = ice)
 const CMAP_E = [
-  [0.03, 0.02, 0.09], [0.28, 0.06, 0.42], [0.72, 0.13, 0.36],
-  [0.96, 0.45, 0.13], [0.99, 0.80, 0.20], [0.99, 0.99, 0.85],
+  [0.267, 0.005, 0.329], [0.255, 0.267, 0.529], [0.165, 0.471, 0.557],
+  [0.133, 0.659, 0.518], [0.478, 0.821, 0.318], [0.992, 0.906, 0.145],
 ];
 const CMAP_B = [
   [0.01, 0.03, 0.08], [0.04, 0.12, 0.35], [0.05, 0.32, 0.65],
@@ -310,12 +395,18 @@ renderer.setSize(innerWidth, innerHeight);
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0b0e14, 220, 640);
+scene.fog = new THREE.Fog(0x0b0e14, 420, 950);
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 2000);
-camera.position.set(52, 27, 96);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 16, 0);
+// frame the scene for the current aspect ratio: wide enough to include the field
+// plane at midspan AND the nearest tower; pull back further on portrait screens
+function setInitialView() {
+  const f = Math.min(2.2, Math.max(1, 1.35 / camera.aspect));
+  camera.position.set(135 * f, 48 + 16 * (f - 1), 165 * f);
+  controls.target.set(0, 18, -55);
+}
+setInitialView();
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.52;
 controls.minDistance = 10;
@@ -506,7 +597,7 @@ function rebuildHardware() {
     const cx = (ph - 1) * state.spacing;
     for (const [ox, oy] of offs) {
       for (let s = 0; s < TOWER_ZS.length - 1; s++) {
-        const geo = catenaryTube(cx + ox, g.hAtt + oy, SAG, TOWER_ZS[s], TOWER_ZS[s + 1], 0.13);
+        const geo = catenaryTube(cx + ox, g.hAtt + oy, state.sag, TOWER_ZS[s], TOWER_ZS[s + 1], 0.13);
         hardware.add(new THREE.Mesh(geo, condMat));
       }
     }
@@ -515,7 +606,7 @@ function rebuildHardware() {
   if (state.shieldWires) {
     for (const sx of [-g.shieldX, g.shieldX]) {
       for (let s = 0; s < TOWER_ZS.length - 1; s++) {
-        const geo = catenaryTube(sx, g.shieldPeakY, SHIELD_SAG, TOWER_ZS[s], TOWER_ZS[s + 1], 0.055);
+        const geo = catenaryTube(sx, g.shieldPeakY, g.shieldSag, TOWER_ZS[s], TOWER_ZS[s + 1], 0.055);
         hardware.add(new THREE.Mesh(geo, shieldMat));
       }
     }
@@ -536,6 +627,70 @@ const fieldUniforms = {
   uLogHi: { value: Math.log(E_HI) },
 };
 
+// shared GLSL: uniforms, colormaps, and the 2D field superposition
+const FIELD_GLSL = /* glsl */`
+  const int MAXC = ${MAXC};
+  const float TWO_PI = 6.28318530718;
+  const float EPS0 = 8.854187817e-12;
+  const float MU0 = 1.25663706212e-6;
+  uniform int uNum;
+  uniform vec2 uPos[MAXC];
+  uniform float uSrcRe[MAXC];
+  uniform float uSrcIm[MAXC];
+  uniform float uCosT, uSinT;
+  uniform int uMode;
+  uniform float uLogLo, uLogHi;
+
+  vec3 stopsE(int i) {
+    if (i == 0) return vec3(0.267, 0.005, 0.329);
+    if (i == 1) return vec3(0.255, 0.267, 0.529);
+    if (i == 2) return vec3(0.165, 0.471, 0.557);
+    if (i == 3) return vec3(0.133, 0.659, 0.518);
+    if (i == 4) return vec3(0.478, 0.821, 0.318);
+    return vec3(0.992, 0.906, 0.145);
+  }
+  vec3 stopsB(int i) {
+    if (i == 0) return vec3(0.01, 0.03, 0.08);
+    if (i == 1) return vec3(0.04, 0.12, 0.35);
+    if (i == 2) return vec3(0.05, 0.32, 0.65);
+    if (i == 3) return vec3(0.10, 0.58, 0.85);
+    if (i == 4) return vec3(0.35, 0.85, 0.95);
+    return vec3(0.90, 0.99, 1.00);
+  }
+  vec3 cmap(float t) {
+    t = clamp(t, 0.0, 1.0) * 5.0;
+    int i = int(min(floor(t), 4.0));
+    float f = t - float(i);
+    return uMode == 0 ? mix(stopsE(i), stopsE(i + 1), f) : mix(stopsB(i), stopsB(i + 1), f);
+  }
+
+  vec2 fieldVec(vec2 p) {
+    vec2 f = vec2(0.0);
+    for (int j = 0; j < MAXC; j++) {
+      if (j >= uNum) break;
+      float src = uSrcRe[j] * uCosT - uSrcIm[j] * uSinT;
+      if (uMode == 0) {
+        vec2 d = p - uPos[j];
+        float r2 = max(dot(d, d), 1e-6);
+        f += (src / (TWO_PI * EPS0 * r2)) * d;
+        d = p - vec2(uPos[j].x, -uPos[j].y);
+        r2 = max(dot(d, d), 1e-6);
+        f += (-src / (TWO_PI * EPS0 * r2)) * d;
+      } else {
+        vec2 d = p - uPos[j];
+        float r2 = max(dot(d, d), 1e-6);
+        float k = MU0 * src / (TWO_PI * r2);
+        f += k * vec2(-d.y, d.x);
+      }
+    }
+    return f;
+  }
+  float fieldT(vec2 p) {
+    float mag = length(fieldVec(p));
+    return clamp((log(max(mag, 1e-12)) - uLogLo) / (uLogHi - uLogLo), 0.0, 1.0);
+  }
+`;
+
 const fieldPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(PLANE_W, PLANE_H),
   new THREE.ShaderMaterial({
@@ -551,70 +706,17 @@ const fieldPlane = new THREE.Mesh(
       }`,
     fragmentShader: /* glsl */`
       precision highp float;
-      const int MAXC = ${MAXC};
-      const float TWO_PI = 6.28318530718;
-      const float EPS0 = 8.854187817e-12;
-      const float MU0 = 1.25663706212e-6;
-      uniform int uNum;
-      uniform vec2 uPos[MAXC];
-      uniform float uSrcRe[MAXC];
-      uniform float uSrcIm[MAXC];
-      uniform float uCosT, uSinT;
-      uniform int uMode;
-      uniform float uLogLo, uLogHi;
+      ${FIELD_GLSL}
       varying vec2 vWorld;
-
-      vec3 stopsE(int i) {
-        if (i == 0) return vec3(0.03, 0.02, 0.09);
-        if (i == 1) return vec3(0.28, 0.06, 0.42);
-        if (i == 2) return vec3(0.72, 0.13, 0.36);
-        if (i == 3) return vec3(0.96, 0.45, 0.13);
-        if (i == 4) return vec3(0.99, 0.80, 0.20);
-        return vec3(0.99, 0.99, 0.85);
-      }
-      vec3 stopsB(int i) {
-        if (i == 0) return vec3(0.01, 0.03, 0.08);
-        if (i == 1) return vec3(0.04, 0.12, 0.35);
-        if (i == 2) return vec3(0.05, 0.32, 0.65);
-        if (i == 3) return vec3(0.10, 0.58, 0.85);
-        if (i == 4) return vec3(0.35, 0.85, 0.95);
-        return vec3(0.90, 0.99, 1.00);
-      }
-      vec3 cmap(float t) {
-        t = clamp(t, 0.0, 1.0) * 5.0;
-        int i = int(min(floor(t), 4.0));
-        float f = t - float(i);
-        return uMode == 0 ? mix(stopsE(i), stopsE(i + 1), f) : mix(stopsB(i), stopsB(i + 1), f);
-      }
-
       void main() {
-        vec2 p = vWorld;
-        vec2 f = vec2(0.0);
-        for (int j = 0; j < MAXC; j++) {
-          if (j >= uNum) break;
-          float src = uSrcRe[j] * uCosT - uSrcIm[j] * uSinT;
-          if (uMode == 0) {
-            vec2 d = p - uPos[j];
-            float r2 = max(dot(d, d), 1e-6);
-            f += (src / (TWO_PI * EPS0 * r2)) * d;
-            d = p - vec2(uPos[j].x, -uPos[j].y);
-            r2 = max(dot(d, d), 1e-6);
-            f += (-src / (TWO_PI * EPS0 * r2)) * d;
-          } else {
-            vec2 d = p - uPos[j];
-            float r2 = max(dot(d, d), 1e-6);
-            float k = MU0 * src / (TWO_PI * r2);
-            f += k * vec2(-d.y, d.x);
-          }
-        }
-        float mag = length(f);
-        float t = (log(max(mag, 1e-12)) - uLogLo) / (uLogHi - uLogLo);
-        gl_FragColor = vec4(cmap(t), 0.94);
+        gl_FragColor = vec4(cmap(fieldT(vWorld)), 0.94);
       }`,
   })
 );
 fieldPlane.position.set(0, PLANE_H / 2, 0);
 scene.add(fieldPlane);
+
+// (3D field visualization: instanced mini-arrows, defined after the arrow glyph below)
 
 function pushUniforms() {
   fieldUniforms.uNum.value = conductors.length;
@@ -635,15 +737,20 @@ function pushUniforms() {
 
 // ---------------------------------------------------------------- direction arrows (instanced cones)
 const arrowXs = [], arrowYs = [];
-for (let x = -38; x <= 38; x += 4.5)
-  for (let y = 2.5; y <= 49; y += 4.5) { arrowXs.push(x); arrowYs.push(y); }
+for (let x = -38; x <= 38; x += 5)
+  for (let y = 2.5; y <= 49; y += 4.6) { arrowXs.push(x); arrowYs.push(y); }
 const N_ARROWS = arrowXs.length;
-const arrowGeo = new THREE.ConeGeometry(0.28, 1, 6);
-arrowGeo.translate(0, 0.5, 0);
-const arrowMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9 });
-const arrows = new THREE.InstancedMesh(arrowGeo, arrowMat, N_ARROWS);
+// proper arrow glyph (shaft + head), pivot at center so it rotates in place
+const arrowShaft = new THREE.CylinderGeometry(0.055, 0.055, 0.68, 5);
+arrowShaft.translate(0, -0.16, 0);
+const arrowHead = new THREE.ConeGeometry(0.19, 0.42, 8);
+arrowHead.translate(0, 0.29, 0);
+const arrowGeo = mergeGeometries([arrowShaft, arrowHead]);
+const arrowMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95 });
+// two instances per grid point: one on each face of the cross-section plane
+const arrows = new THREE.InstancedMesh(arrowGeo, arrowMat, N_ARROWS * 2);
 arrows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-arrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N_ARROWS * 3), 3);
+arrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N_ARROWS * 2 * 3), 3);
 scene.add(arrows);
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
@@ -652,25 +759,74 @@ const _c = new THREE.Color();
 function updateArrows(cosT, sinT) {
   const isE = state.mode === 'E';
   const logLo = Math.log(isE ? E_LO : B_LO), logHi = Math.log(isE ? E_HI : B_HI);
+  let idx = 0;
   for (let i = 0; i < N_ARROWS; i++) {
     const [fx, fy] = fieldAt(arrowXs[i], arrowYs[i], cosT, sinT, state.mode);
     const mag = Math.hypot(fx, fy);
     let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
     t = Math.min(Math.max(t, 0), 1);
-    const len = 0.8 + 3.2 * t;
+    const len = 1.1 + 3.4 * t;
+    const w = 0.9 + 1.0 * t;
     _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
     _q.setFromUnitVectors(_up, _dir);
-    _pos.set(arrowXs[i], arrowYs[i], 0.35);
-    _s.set(1, len, 1);
-    _m.compose(_pos, _q, _s);
-    arrows.setMatrixAt(i, _m);
-    const b = 0.3 + 0.7 * t;
-    if (isE) _c.setRGB(b, b * 0.82, b * 0.55);   // warm tint for E
-    else     _c.setRGB(b * 0.5, b * 0.85, b);     // ice tint for B
-    arrows.setColorAt(i, _c);
+    _s.set(w, len, w);
+    const [cr, cg, cb] = cmapJS(0.22 + 0.78 * t, state.mode);  // colormap-matched, floor-lifted
+    _c.setRGB(cr, cg, cb);
+    for (const dz of [0.45, -0.45]) {
+      _pos.set(arrowXs[i], arrowYs[i], state.planeZ + dz);
+      _m.compose(_pos, _q, _s);
+      arrows.setMatrixAt(idx, _m);
+      arrows.setColorAt(idx, _c);
+      idx++;
+    }
   }
   arrows.instanceMatrix.needsUpdate = true;
   arrows.instanceColor.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- 3D volume mini-arrows
+// The field is invariant along the line, so each (x, y) column is computed once
+// and reused for every z — a full 3D quiver at the cost of a 2D one.
+const volCols = [];
+for (let x = -40; x <= 40; x += 6.4)
+  for (let y = 3; y <= 48; y += 5) volCols.push([x, y]);
+const volZs = [];
+for (let z = -128; z <= 128; z += 10.5) volZs.push(z);
+const N_VOL = volCols.length * volZs.length;
+const volGeo = arrowGeo.clone();
+volGeo.scale(0.55, 0.55, 0.55);
+const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
+const volArrows = new THREE.InstancedMesh(volGeo, volMat, N_VOL);
+volArrows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+volArrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N_VOL * 3), 3);
+scene.add(volArrows);
+
+function updateVolArrows(cosT, sinT) {
+  const isE = state.mode === 'E';
+  const logLo = Math.log(isE ? E_LO : B_LO), logHi = Math.log(isE ? E_HI : B_HI);
+  let idx = 0;
+  for (const [x, y] of volCols) {
+    const [fx, fy] = fieldAt(x, y, cosT, sinT, state.mode);
+    const mag = Math.hypot(fx, fy);
+    let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
+    t = Math.min(Math.max(t, 0), 1);
+    const len = 0.9 + 2.8 * t;
+    const w = 0.85 + 0.9 * t;
+    _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
+    _q.setFromUnitVectors(_up, _dir);
+    _s.set(w, len, w);
+    const [cr, cg, cb] = cmapJS(0.2 + 0.8 * t, state.mode);
+    _c.setRGB(cr, cg, cb);
+    for (const z of volZs) {
+      _pos.set(x, y, z);
+      _m.compose(_pos, _q, _s);
+      volArrows.setMatrixAt(idx, _m);
+      volArrows.setColorAt(idx, _c);
+      idx++;
+    }
+  }
+  volArrows.instanceMatrix.needsUpdate = true;
+  volArrows.instanceColor.needsUpdate = true;
 }
 
 // ---------------------------------------------------------------- legend
@@ -702,21 +858,21 @@ function drawChart() {
   const isE = state.mode === 'E';
   ctx.clearRect(0, 0, W, H);
 
-  const X0 = 58, X1 = W - 14, Y0 = 14, Y1 = H - 34;
+  const X0 = 78, X1 = W - 16, Y0 = 14, Y1 = H - 40;
   const xMin = -40, xMax = 40, NPTS = 160;
   const ys = [];
   let yMax = 0;
   for (let i = 0; i <= NPTS; i++) {
     const x = xMin + (xMax - xMin) * i / NPTS;
-    let v = rmsAt(x, 1, state.mode);
+    let v = rmsAt(x, state.probeH, state.mode);
     v = isE ? v / 1000 : v * 1e6;
     ys.push(v);
     if (v > yMax) yMax = v;
   }
   yMax = yMax > 0 ? yMax * 1.15 : 1;
 
-  ctx.strokeStyle = '#26303f'; ctx.fillStyle = '#8fa0b8';
-  ctx.font = '19px "Segoe UI"'; ctx.lineWidth = 1;
+  ctx.strokeStyle = '#26303f'; ctx.fillStyle = '#9fb0c4';
+  ctx.font = '26px "Segoe UI"'; ctx.lineWidth = 1;
   ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let g = 0; g <= 4; g++) {
@@ -737,23 +893,24 @@ function drawChart() {
     const yp = Y1 - (Y1 - Y0) * ys[i] / yMax;
     i === 0 ? ctx.moveTo(xp, yp) : ctx.lineTo(xp, yp);
   }
-  ctx.strokeStyle = isE ? '#ffb35c' : '#5cc8ff';
-  ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.strokeStyle = isE ? '#7ad151' : '#5cc8ff';
+  ctx.lineWidth = 3.5; ctx.stroke();
 
+  const hTxt = state.probeH + ' m';
   document.getElementById('chartTitle').textContent = isE
-    ? 'Ground-level E-field profile (rms, kV/m, at 1 m height)'
-    : 'Ground-level B-field profile (rms, µT, at 1 m height)';
+    ? `E-field profile (rms, kV/m, at ${hTxt} height)`
+    : `B-field profile (rms, µT, at ${hTxt} height)`;
 
   let eMax = 0, bMax = 0;
   for (let i = 0; i <= NPTS; i++) {
     const x = xMin + (xMax - xMin) * i / NPTS;
-    eMax = Math.max(eMax, rmsAt(x, 1, 'E'));
-    bMax = Math.max(bMax, rmsAt(x, 1, 'B'));
+    eMax = Math.max(eMax, rmsAt(x, state.probeH, 'E'));
+    bMax = Math.max(bMax, rmsAt(x, state.probeH, 'B'));
   }
   const nPhase = conductors.filter(c => !c.shield).length;
   document.getElementById('readout').innerHTML =
-    `Max ground-level E (1 m): <b>${(eMax / 1000).toFixed(2)} kV/m</b><br>` +
-    `Max ground-level B (1 m): <b>${(bMax * 1e6).toFixed(2)} µT</b><br>` +
+    `Max E (${hTxt}): <b>${(eMax / 1000).toFixed(2)} kV/m</b><br>` +
+    `Max B (${hTxt}): <b>${(bMax * 1e6).toFixed(2)} µT</b><br>` +
     `Phase subconductors: <b>${nPhase}</b>` +
     (state.shieldWires ? ` &nbsp;·&nbsp; shields: <b>2</b>` : '');
 }
@@ -788,20 +945,31 @@ function drawPhasors(theta) {
 let geomKey = '';
 function refreshAll() {
   solveLine();
-  const key = [state.spacing, state.height, state.nSub, state.bundleSpacing, state.shieldWires].join('|');
+  const key = [state.spacing, state.height, state.sag, state.nSub, state.bundleSpacing, state.shieldWires].join('|');
   if (key !== geomKey) { rebuildHardware(); geomKey = key; }
+  fieldPlane.position.z = state.planeZ;
   pushUniforms();
   drawLegend();
   drawChart();
+}
+
+// paint the filled portion of a slider track (inline backgroundImage so the
+// CSS background-color stays as the empty-track base)
+function paintSlider(el, vertical = false) {
+  const p = (el.value - el.min) / (el.max - el.min) * 100;
+  el.style.backgroundImage =
+    `linear-gradient(${vertical ? 'to top' : 'to right'}, #4a8fdd 0%, #4a8fdd ${p}%, transparent ${p}%)`;
 }
 
 function bindSlider(id, valId, get, set, fmt) {
   const el = document.getElementById(id), lab = document.getElementById(valId);
   el.value = get();
   lab.textContent = fmt(get());
+  paintSlider(el);
   el.addEventListener('input', () => {
     set(parseFloat(el.value));
     lab.textContent = fmt(get());
+    paintSlider(el);
     refreshAll();
   });
 }
@@ -811,7 +979,10 @@ bindSlider('sSlider', 'sVal', () => state.spacing, v => state.spacing = v, v => 
 bindSlider('hSlider', 'hVal', () => state.height, v => state.height = v, v => v + ' m');
 bindSlider('nSlider', 'nVal', () => state.nSub, v => state.nSub = Math.round(v), v => '' + v);
 bindSlider('bSlider', 'bVal', () => state.bundleSpacing * 100, v => state.bundleSpacing = v / 100, v => v + ' cm');
+bindSlider('dSlider', 'dVal', () => state.condDiam, v => state.condDiam = v, v => v.toFixed(1) + ' mm');
+bindSlider('sagSlider', 'sagVal', () => state.sag, v => state.sag = v, v => v + ' m');
 bindSlider('aSlider', 'aVal', () => state.visHz, v => state.visHz = v, v => v.toFixed(2) + ' cyc/s');
+bindSlider('zSlider', 'zVal', () => state.planeZ, v => state.planeZ = v, v => v === 0 ? 'midspan' : (v > 0 ? '+' : '') + v + ' m');
 
 const btnE = document.getElementById('btnE'), btnB = document.getElementById('btnB');
 function setMode(m) {
@@ -827,10 +998,44 @@ document.getElementById('arrowsChk').addEventListener('change', e => {
   state.showArrows = e.target.checked;
   arrows.visible = state.showArrows;
 });
+document.getElementById('planeChk').addEventListener('change', e => {
+  fieldPlane.visible = e.target.checked;
+});
+document.getElementById('cloudChk').addEventListener('change', e => {
+  volArrows.visible = e.target.checked;
+});
+// bottom chips: field profile chart and phasor clock
+const phasorBox = document.getElementById('phasorBox');
+const chartBoxEl = document.getElementById('chartBox');
+function wireChip(chipId, boxEl) {
+  const chip = document.getElementById(chipId);
+  chip.addEventListener('click', () => {
+    const show = boxEl.style.display === 'none';
+    boxEl.style.display = show ? 'block' : 'none';
+    chip.classList.toggle('active', show);
+  });
+}
+wireChip('chipChart', chartBoxEl);
+wireChip('chipPhasor', phasorBox);
+
+// probe height for the field profile (chart-only, no re-solve needed)
+const probeSlider = document.getElementById('probeSlider');
+paintSlider(probeSlider, true);
+probeSlider.addEventListener('input', () => {
+  state.probeH = parseFloat(probeSlider.value);
+  document.getElementById('probeVal').textContent = state.probeH + ' m';
+  paintSlider(probeSlider, true);
+  drawChart();
+});
 document.getElementById('shieldChk').addEventListener('change', e => {
   state.shieldWires = e.target.checked;
   refreshAll();
 });
+
+// collapsible parameter panel (starts collapsed on small screens)
+const panelEl = document.getElementById('panel');
+document.getElementById('panelHead').addEventListener('click', () => panelEl.classList.toggle('collapsed'));
+if (innerWidth <= 700 || innerHeight <= 540) panelEl.classList.add('collapsed');
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -849,7 +1054,8 @@ function animate() {
   fieldUniforms.uCosT.value = cosT;
   fieldUniforms.uSinT.value = sinT;
   if (state.showArrows) updateArrows(cosT, sinT);
-  drawPhasors(theta);
+  if (volArrows.visible) updateVolArrows(cosT, sinT);
+  if (phasorBox.style.display !== 'none') drawPhasors(theta);
   controls.update();
   renderer.render(scene, camera);
 }

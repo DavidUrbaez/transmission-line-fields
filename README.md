@@ -37,8 +37,12 @@ method of images for the ground plane:
 
 ```
 P_ij = ln(D'_ij / D_ij) / (2π ε₀)      D'_ij = distance to image of j
-P_ii = ln(2h_i / r) / (2π ε₀)          r = subconductor radius (15 mm)
+P_ii = ln(2h_i / r) / (2π ε₀)          r = subconductor radius (slider, diameter in mm)
 ```
+
+Grounded shield wires enter the same solve as V = 0 conductors, so they carry
+induced charges. Sag is a slider; the cross-section position slider moves the
+field plane along the span and the solve tracks the true conductor heights there.
 
 Phase voltages are balanced phasors (0°, −120°, +120°) at the peak
 phase-to-ground value. Since `P` is real, the real and imaginary parts of the
