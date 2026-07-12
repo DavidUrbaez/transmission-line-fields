@@ -771,8 +771,8 @@ function pushUniforms() {
 // ---------------------------------------------------------------- direction arrows (instanced cones)
 // arrow grids have a FIXED instance count; the x columns spread to the current
 // significant-field extent (computed in updateFieldExtent below)
-const ARROW_COLS = 16, ARROW_ROWS = [];
-for (let y = 2.5; y <= 49; y += 4.6) ARROW_ROWS.push(y);
+const ARROW_COLS = 22, ARROW_ROWS = [];
+for (let y = 2.5; y <= 49; y += 3.6) ARROW_ROWS.push(y);
 const N_ARROWS = ARROW_COLS * ARROW_ROWS.length;
 let arrowXs = [], arrowYs = [];
 function buildArrowGrid(X) {
@@ -843,8 +843,8 @@ function updateArrows(cosT, sinT) {
 // ---------------------------------------------------------------- 3D volume mini-arrows
 // The field is invariant along the line, so each (x, y) column is computed once
 // and reused for every z — a full 3D quiver at the cost of a 2D one.
-const VOL_COLS = 19, VOL_ROWS = [];
-for (let y = 3; y <= 48; y += 4) VOL_ROWS.push(y);
+const VOL_COLS = 25, VOL_ROWS = [];
+for (let y = 3; y <= 48; y += 3.2) VOL_ROWS.push(y);
 let volCols = [];
 function buildVolGrid(X) {
   volCols = [];
@@ -855,7 +855,7 @@ function buildVolGrid(X) {
 }
 buildVolGrid(40);
 const volZs = [];
-for (let z = -128; z <= 128; z += 8) volZs.push(z);
+for (let z = -128; z <= 128; z += 6.5) volZs.push(z);
 const N_VOL = VOL_COLS * VOL_ROWS.length * volZs.length;
 const volGeo = arrowGeo;   // same glyph and size law as the cross-section arrows
 const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6 });
@@ -1180,10 +1180,12 @@ addEventListener('resize', () => {
 
 // ---------------------------------------------------------------- animation loop
 let theta = 0;
+let avgFrameMs = 0;
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
+  avgFrameMs = avgFrameMs * 0.95 + dt * 1000 * 0.05;
   theta += 2 * Math.PI * state.visHz * dt;
   const cosT = Math.cos(theta), sinT = Math.sin(theta);
   fieldUniforms.uCosT.value = cosT;
@@ -1199,7 +1201,9 @@ refreshAll();
 animate();
 window.__viz = { camera, controls, state, geom,
   debug: () => ({ fieldExtent, planeScaleX: +fieldPlane.scale.x.toFixed(3),
-                  arrowXmax: Math.max(...arrowXs), volXmax: Math.max(...volCols.map(c => c[0])) }) };
+                  arrowXmax: Math.max(...arrowXs), volXmax: Math.max(...volCols.map(c => c[0])),
+                  nPlaneArrows: N_ARROWS * 2, nVolArrows: N_VOL,
+                  avgFrameMs: +avgFrameMs.toFixed(2) }) };
 
 // ---------------------------------------------------------------- guided tour
 const TOUR_KEY = 'powerviz.tourDone';
