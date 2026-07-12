@@ -15,7 +15,14 @@
   #legendCanvas { width: 16px; height: 140px; border-radius: 3px; }
   #legendLabels { display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: #aeb9c9; }
   #legendTitle { font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #dde3ea; }
-  #legendNote { font-size: 10px; color: #6d7a8c; margin-top: 6px; max-width: 120px; }
+  #legLoWrap { display: flex; align-items: center; gap: 3px; }
+  #loInput { width: 52px; min-width: 0; background: #141a26; border: 1px solid #2c3850;
+    color: #e8eef6; border-radius: 5px; font-size: 10.5px; padding: 2px 4px; font-family: inherit;
+    -moz-appearance: textfield; appearance: textfield; }
+  #loInput:focus { outline: none; border-color: #3d6cb0; }
+  #loInput::-webkit-outer-spin-button,
+  #loInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #loUnit { color: #8fa0b8; font-size: 10px; }
 
   #panel { top: 14px; right: 14px; width: 268px; background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 14px 16px 12px; backdrop-filter: blur(6px); }
   #panel h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8fa0b8; }
@@ -93,7 +100,6 @@
   @media (max-width: 700px), (max-height: 540px) {
     #legend { top: 8px; padding: 7px 9px; }
     #legendCanvas { width: 12px; height: 92px; }
-    #legendNote { display: none; }
     /* Configuration sheet floats ABOVE the chips row so the buttons stay reachable */
     #panel { top: auto; left: 8px; right: 8px; bottom: 52px; width: auto;
              max-height: 48vh; overflow-y: auto; border-radius: 12px;
@@ -129,9 +135,12 @@
   <div id="legendTitle">|E| field</div>
   <div class="bar-row">
     <canvas id="legendCanvas" width="16" height="140"></canvas>
-    <div id="legendLabels"><span id="legHi"></span><span id="legMid"></span><span id="legLo"></span></div>
+    <div id="legendLabels">
+      <span id="legHi"></span>
+      <span id="legMid"></span>
+      <span id="legLoWrap"><input type="number" id="loInput" value="800"><span id="loUnit">V/m</span></span>
+    </div>
   </div>
-  <div id="legendNote">log scale</div>
 </div>
 
 <div id="panel" class="overlay">
@@ -220,7 +229,7 @@ const INS_LEN = 3.4;              // insulator string vertical extent (m)
 const PHASE_ANGLES = [0, -2 * Math.PI / 3, 2 * Math.PI / 3];
 const PHASE_COLORS = ['#ffb04d', '#63d8cf', '#b58cff'];
 
-// Colormap ranges (log scale)
+// Colormap ranges (log scale); the low end is user-adjustable, these are defaults
 const E_LO = 50,    E_HI = 2e6;   // V/m
 const B_LO = 2e-7,  B_HI = 1e-3;  // T
 
@@ -238,9 +247,12 @@ const state = {
   visHz: 0.25,
   planeZ: 0,                      // cross-section position along the middle span
   probeH: 1,                      // probe height for the field profile chart (m)
+  eLoExp: Math.log10(800),        // log-scale floor for E: 800 V/m default
+  bLoExp: Math.log10(5e-6),       // log-scale floor for B: 5 µT default
   showArrows: true,
   shieldWires: true,
 };
+const activeLo = () => 10 ** (state.mode === 'E' ? state.eLoExp : state.bLoExp);
 
 // derived geometry, shared by physics and visuals
 function geom() {
@@ -752,7 +764,7 @@ function pushUniforms() {
     }
   });
   fieldUniforms.uMode.value = state.mode === 'E' ? 0 : 1;
-  fieldUniforms.uLogLo.value = Math.log(state.mode === 'E' ? E_LO : B_LO);
+  fieldUniforms.uLogLo.value = Math.log(activeLo());
   fieldUniforms.uLogHi.value = Math.log(state.mode === 'E' ? E_HI : B_HI);
 }
 
@@ -789,22 +801,27 @@ const _up = new THREE.Vector3(0, 1, 0), _dir = new THREE.Vector3(), _pos = new T
 const _c = new THREE.Color();
 
 // one magnitude-to-size law shared by the plane and volume arrows:
-// length grows with log-magnitude from 0, hidden below a very low cutoff
+// length grows with normalized magnitude from 0, hidden below a very low cutoff
 const ARROW_TMIN = 0.05;
 function arrowSize(t) {
   if (t < ARROW_TMIN) return null;      // field essentially zero here: no arrow
   return { len: 5.2 * t, w: 0.55 + 1.4 * t };
 }
 
+// normalized magnitude 0..1 on the log scale with the user-set floor
+function magT(mag, isE) {
+  const lo = activeLo(), hi = isE ? E_HI : B_HI;
+  const t = (Math.log(Math.max(mag, 1e-12)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo));
+  return Math.min(Math.max(t, 0), 1);
+}
+
 function updateArrows(cosT, sinT) {
   const isE = state.mode === 'E';
-  const logLo = Math.log(isE ? E_LO : B_LO), logHi = Math.log(isE ? E_HI : B_HI);
   let idx = 0;
   for (let i = 0; i < N_ARROWS; i++) {
     const [fx, fy] = fieldAt(arrowXs[i], arrowYs[i], cosT, sinT, state.mode);
     const mag = Math.hypot(fx, fy);
-    let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
-    t = Math.min(Math.max(t, 0), 1);
+    const t = magT(mag, isE);
     const sz = arrowSize(t);
     _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
     _q.setFromUnitVectors(_up, _dir);
@@ -826,8 +843,8 @@ function updateArrows(cosT, sinT) {
 // ---------------------------------------------------------------- 3D volume mini-arrows
 // The field is invariant along the line, so each (x, y) column is computed once
 // and reused for every z — a full 3D quiver at the cost of a 2D one.
-const VOL_COLS = 13, VOL_ROWS = [];
-for (let y = 3; y <= 48; y += 5) VOL_ROWS.push(y);
+const VOL_COLS = 19, VOL_ROWS = [];
+for (let y = 3; y <= 48; y += 4) VOL_ROWS.push(y);
 let volCols = [];
 function buildVolGrid(X) {
   volCols = [];
@@ -838,7 +855,7 @@ function buildVolGrid(X) {
 }
 buildVolGrid(40);
 const volZs = [];
-for (let z = -128; z <= 128; z += 10.5) volZs.push(z);
+for (let z = -128; z <= 128; z += 8) volZs.push(z);
 const N_VOL = VOL_COLS * VOL_ROWS.length * volZs.length;
 const volGeo = arrowGeo;   // same glyph and size law as the cross-section arrows
 const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6 });
@@ -849,13 +866,11 @@ scene.add(volArrows);
 
 function updateVolArrows(cosT, sinT) {
   const isE = state.mode === 'E';
-  const logLo = Math.log(isE ? E_LO : B_LO), logHi = Math.log(isE ? E_HI : B_HI);
   let idx = 0;
   for (const [x, y] of volCols) {
     const [fx, fy] = fieldAt(x, y, cosT, sinT, state.mode);
     const mag = Math.hypot(fx, fy);
-    let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
-    t = Math.min(Math.max(t, 0), 1);
+    const t = magT(mag, isE);
     const sz = arrowSize(t);
     _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
     _q.setFromUnitVectors(_up, _dir);
@@ -887,12 +902,11 @@ function drawLegend() {
   }
   const isE = state.mode === 'E';
   document.getElementById('legendTitle').textContent = isE ? '|E| field' : '|B| field';
-  const lo = isE ? E_LO : B_LO, hi = isE ? E_HI : B_HI;
-  const mid = Math.exp((Math.log(lo) + Math.log(hi)) / 2);
   const f = isE ? fmtE : fmtB;
+  const lo = activeLo(), hi = isE ? E_HI : B_HI;
+  const mid = Math.exp((Math.log(lo) + Math.log(hi)) / 2);
   document.getElementById('legHi').textContent = '≥ ' + f(hi);
   document.getElementById('legMid').textContent = f(Number(mid.toPrecision(1)));
-  document.getElementById('legLo').textContent = '≤ ' + f(lo);
 }
 
 // ---------------------------------------------------------------- ground-level profile chart
@@ -906,15 +920,9 @@ function drawChart() {
   const X0 = 78, X1 = W - 16, Y0 = 14, Y1 = H - 40;
   const unit = v => isE ? v / 1000 : v * 1e6;   // kV/m or µT
 
-  // adaptive x range: extend until the field decays below 5% of its peak
-  let peak = 0, xEdge = 30;
-  for (let x = 0; x <= 150; x += 2) {
-    const v = Math.max(unit(rmsAt(x, state.probeH, state.mode)),
-                       unit(rmsAt(-x, state.probeH, state.mode)));
-    if (v > peak) peak = v;
-    if (v >= peak * 0.05) xEdge = x;
-  }
-  const xMax = Math.min(150, Math.max(30, Math.ceil(xEdge * 1.1 / 10) * 10));
+  // x range follows the shared significant-field extent, which only changes
+  // with the line configuration or mode — never with the probe height
+  const xMax = fieldExtent || 40;
   const xMin = -xMax, NPTS = 160;
 
   // fixed Y ceiling: 1.1 x the profile max at the height slider's maximum (10 m),
@@ -1073,11 +1081,35 @@ function setMode(m) {
   state.mode = m;
   btnE.classList.toggle('active', m === 'E');
   btnB.classList.toggle('active', m === 'B');
+  syncLoInput();                     // each mode remembers its own floor
   updateFieldExtent();               // E and B decay differently
   pushUniforms(); drawLegend(); drawChart();
 }
 btnE.addEventListener('click', () => setMode('E'));
 btnB.addEventListener('click', () => setMode('B'));
+
+// colormap floor text box: value in V/m (E) or µT (B), stored per mode
+const loInput = document.getElementById('loInput');
+function syncLoInput() {
+  const isE = state.mode === 'E';
+  document.getElementById('loUnit').textContent = isE ? 'V/m' : 'µT';
+  loInput.min = isE ? 10 : 0.01;   // E: 10 V/m .. 100 kV/m,  B: 0.01 µT .. 100 µT
+  loInput.max = isE ? 100000 : 100;
+  loInput.step = 'any';
+  const v = isE ? 10 ** state.eLoExp : 10 ** state.bLoExp * 1e6;
+  loInput.value = Number(v.toPrecision(3));
+}
+loInput.addEventListener('change', () => {
+  const isE = state.mode === 'E';
+  let v = parseFloat(loInput.value);
+  if (!isFinite(v) || v <= 0) { syncLoInput(); return; }
+  v = Math.min(Math.max(v, parseFloat(loInput.min)), parseFloat(loInput.max));
+  if (isE) state.eLoExp = Math.log10(v);
+  else state.bLoExp = Math.log10(v * 1e-6);   // µT -> T
+  syncLoInput();
+  pushUniforms(); drawLegend();
+});
+syncLoInput();
 
 document.getElementById('arrowsChk').addEventListener('change', e => {
   state.showArrows = e.target.checked;
