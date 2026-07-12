@@ -10,11 +10,7 @@
   canvas { display: block; }
 
   .overlay { position: absolute; z-index: 10; }
-  #title { top: 14px; left: 16px; pointer-events: none; }
-  #title h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0.3px; }
-  #title p { margin: 2px 0 0; font-size: 12px; color: #93a0b4; }
-
-  #legend { top: 70px; left: 16px; background: rgba(13,17,26,0.82); border: 1px solid #26303f; border-radius: 8px; padding: 10px 12px; }
+  #legend { top: 14px; left: 16px; background: rgba(13,17,26,0.82); border: 1px solid #26303f; border-radius: 8px; padding: 10px 12px; }
   #legend .bar-row { display: flex; align-items: stretch; gap: 8px; }
   #legendCanvas { width: 16px; height: 140px; border-radius: 3px; }
   #legendLabels { display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: #aeb9c9; }
@@ -25,8 +21,8 @@
   #panel h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8fa0b8; }
   .mode-row { display: flex; gap: 6px; margin-bottom: 12px; }
   .mode-btn { flex: 1; padding: 7px 0; font-size: 12.5px; font-weight: 600; border-radius: 6px; border: 1px solid #2c3850; background: #141a26; color: #93a0b4; cursor: pointer; }
-  #btnE.active { background: #12352a; border-color: #35b779; color: #c9f2d4; }
-  #btnB.active { background: #10304a; border-color: #2a7ab0; color: #a8dcff; }
+  #btnE.active { background: #10304a; border-color: #2a7ab0; color: #a8dcff; }
+  #btnB.active { background: #3a1430; border-color: #e16462; color: #ffd9c9; }
   .ctl { margin-bottom: 9px; }
   .ctl label { display: flex; justify-content: space-between; font-size: 11.5px; color: #aeb9c9; margin-bottom: 3px; }
   .ctl label b { color: #e8eef6; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -70,6 +66,23 @@
 
   #hint { bottom: 14px; right: 190px; font-size: 11px; color: #5d6a7d; pointer-events: none; }
 
+  /* ---- guided tour ---- */
+  #tourDim { position: fixed; inset: 0; background: rgba(4,7,12,0.62); z-index: 55; display: none; pointer-events: none; }
+  #tourRing { position: fixed; z-index: 55; border: 2px solid #6db3f2; border-radius: 12px;
+              box-shadow: 0 0 0 9999px rgba(4,7,12,0.62); pointer-events: none; display: none;
+              transition: left 0.25s, top 0.25s, width 0.25s, height 0.25s; }
+  #tourCard { position: fixed; z-index: 60; display: none; background: #101623; border: 1px solid #33415a;
+              border-radius: 12px; padding: 14px 16px 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.55);
+              box-sizing: border-box; }
+  #tourCard h3 { margin: 0 0 6px; font-size: 14px; color: #eaf1fa; }
+  #tourCard p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: #aeb9c9; }
+  #tourNav { display: flex; align-items: center; gap: 8px; }
+  #tourStepNum { font-size: 11px; color: #6d7a8c; margin-right: auto; }
+  .tour-btn { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  #tourNext { background: #2c65b5; border: 1px solid #4a8fdd; color: #fff; }
+  #tourBack, #tourSkip { background: #141a26; border: 1px solid #2c3850; color: #93a0b4; }
+  #tourBack:disabled { opacity: 0.4; cursor: default; }
+
   #panelHead { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
   #panelChevron { display: inline-block; transition: transform 0.2s; font-size: 11px; }
   #panel.collapsed #panelBody { display: none; }
@@ -78,21 +91,20 @@
 
   /* ---- small screens: bottom-sheet panel, scaled overlays ---- */
   @media (max-width: 700px), (max-height: 540px) {
-    #title h1 { font-size: 14px; }
-    #title p { font-size: 10px; max-width: 60vw; }
-    #legend { top: 56px; padding: 7px 9px; }
+    #legend { top: 8px; padding: 7px 9px; }
     #legendCanvas { width: 12px; height: 92px; }
     #legendNote { display: none; }
-    #panel { top: auto; left: 8px; right: 8px; bottom: 0; width: auto;
-             max-height: 52vh; overflow-y: auto; border-radius: 12px 12px 0 0;
+    /* Configuration sheet floats ABOVE the chips row so the buttons stay reachable */
+    #panel { top: auto; left: 8px; right: 8px; bottom: 52px; width: auto;
+             max-height: 48vh; overflow-y: auto; border-radius: 12px;
              padding: 10px 14px; }
     input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
     #modeBox { top: 8px; left: auto; right: 8px; transform: none; padding: 4px; }
     #modeBox .mode-btn { width: 72px; padding: 6px 0; }
-    #chips { left: 8px; bottom: 58px; }
-    #chartBox { left: 8px; bottom: 98px; padding: 6px 8px 4px; }
+    #chips { left: 8px; right: 8px; bottom: 8px; }
+    #chartBox { left: 8px; bottom: 100px; padding: 6px 8px 4px; }
     #chartCanvas { width: min(300px, calc(100vw - 118px)); height: auto; aspect-ratio: 680 / 260; }
-    #phasorBox { right: 8px; bottom: 98px; }
+    #phasorBox { right: 8px; bottom: 100px; }
     #hint { display: none; }
   }
 </style>
@@ -107,11 +119,6 @@
 </head>
 <body>
 <div id="app"></div>
-
-<div id="title" class="overlay">
-  <h1>Fields Around a Transmission Line</h1>
-  <p>Instantaneous field on the cross-section plane at midspan, animated at slowed-down 60&nbsp;Hz</p>
-</div>
 
 <div id="modeBox" class="overlay">
   <button id="btnE" class="mode-btn active">E field</button>
@@ -164,7 +171,7 @@
   <div id="chartRow">
     <canvas id="chartCanvas" width="680" height="260"></canvas>
     <div id="probeCol">
-      <b id="probeVal">1 m</b>
+      <b id="probeVal">1.00 m</b>
       <input type="range" id="probeSlider" orient="vertical" min="0" max="10" step="0.25" value="1">
       <span>height</span>
     </div>
@@ -174,6 +181,20 @@
 <div id="chips" class="overlay">
   <button id="chipChart" class="chip active">Field profile</button>
   <button id="chipPhasor" class="chip">Phase voltages</button>
+  <button id="chipTour" class="chip" title="Guided tour">?</button>
+</div>
+
+<div id="tourDim"></div>
+<div id="tourRing"></div>
+<div id="tourCard">
+  <h3 id="tourTitle"></h3>
+  <p id="tourText"></p>
+  <div id="tourNav">
+    <span id="tourStepNum"></span>
+    <button id="tourSkip" class="tour-btn">Skip</button>
+    <button id="tourBack" class="tour-btn">Back</button>
+    <button id="tourNext" class="tour-btn">Next</button>
+  </div>
 </div>
 
 <div id="phasorBox" class="overlay" style="display:none">
@@ -371,14 +392,14 @@ function rmsAt(x, y, mode) {
   return Math.sqrt((fxRe * fxRe + fxIm * fxIm + fyRe * fyRe + fyIm * fyIm) / 2);
 }
 
-// ---------------------------------------------------------------- colormaps (E = viridis, B = ice)
+// ---------------------------------------------------------------- colormaps (E = ice, B = plasma)
 const CMAP_E = [
-  [0.267, 0.005, 0.329], [0.255, 0.267, 0.529], [0.165, 0.471, 0.557],
-  [0.133, 0.659, 0.518], [0.478, 0.821, 0.318], [0.992, 0.906, 0.145],
-];
-const CMAP_B = [
   [0.01, 0.03, 0.08], [0.04, 0.12, 0.35], [0.05, 0.32, 0.65],
   [0.10, 0.58, 0.85], [0.35, 0.85, 0.95], [0.90, 0.99, 1.00],
+];
+const CMAP_B = [
+  [0.050, 0.030, 0.528], [0.417, 0.001, 0.658], [0.694, 0.165, 0.564],
+  [0.882, 0.392, 0.383], [0.988, 0.652, 0.211], [0.940, 0.975, 0.131],
 ];
 function cmapJS(t, mode) {
   const M = mode === 'E' ? CMAP_E : CMAP_B;
@@ -642,20 +663,20 @@ const FIELD_GLSL = /* glsl */`
   uniform float uLogLo, uLogHi;
 
   vec3 stopsE(int i) {
-    if (i == 0) return vec3(0.267, 0.005, 0.329);
-    if (i == 1) return vec3(0.255, 0.267, 0.529);
-    if (i == 2) return vec3(0.165, 0.471, 0.557);
-    if (i == 3) return vec3(0.133, 0.659, 0.518);
-    if (i == 4) return vec3(0.478, 0.821, 0.318);
-    return vec3(0.992, 0.906, 0.145);
-  }
-  vec3 stopsB(int i) {
     if (i == 0) return vec3(0.01, 0.03, 0.08);
     if (i == 1) return vec3(0.04, 0.12, 0.35);
     if (i == 2) return vec3(0.05, 0.32, 0.65);
     if (i == 3) return vec3(0.10, 0.58, 0.85);
     if (i == 4) return vec3(0.35, 0.85, 0.95);
     return vec3(0.90, 0.99, 1.00);
+  }
+  vec3 stopsB(int i) {
+    if (i == 0) return vec3(0.050, 0.030, 0.528);
+    if (i == 1) return vec3(0.417, 0.001, 0.658);
+    if (i == 2) return vec3(0.694, 0.165, 0.564);
+    if (i == 3) return vec3(0.882, 0.392, 0.383);
+    if (i == 4) return vec3(0.988, 0.652, 0.211);
+    return vec3(0.940, 0.975, 0.131);
   }
   vec3 cmap(float t) {
     t = clamp(t, 0.0, 1.0) * 5.0;
@@ -736,10 +757,20 @@ function pushUniforms() {
 }
 
 // ---------------------------------------------------------------- direction arrows (instanced cones)
-const arrowXs = [], arrowYs = [];
-for (let x = -38; x <= 38; x += 5)
-  for (let y = 2.5; y <= 49; y += 4.6) { arrowXs.push(x); arrowYs.push(y); }
-const N_ARROWS = arrowXs.length;
+// arrow grids have a FIXED instance count; the x columns spread to the current
+// significant-field extent (computed in updateFieldExtent below)
+const ARROW_COLS = 16, ARROW_ROWS = [];
+for (let y = 2.5; y <= 49; y += 4.6) ARROW_ROWS.push(y);
+const N_ARROWS = ARROW_COLS * ARROW_ROWS.length;
+let arrowXs = [], arrowYs = [];
+function buildArrowGrid(X) {
+  arrowXs = []; arrowYs = [];
+  for (let c = 0; c < ARROW_COLS; c++) {
+    const x = -X + 2 * X * c / (ARROW_COLS - 1);
+    for (const y of ARROW_ROWS) { arrowXs.push(x); arrowYs.push(y); }
+  }
+}
+buildArrowGrid(40);
 // proper arrow glyph (shaft + head), pivot at center so it rotates in place
 const arrowShaft = new THREE.CylinderGeometry(0.055, 0.055, 0.68, 5);
 arrowShaft.translate(0, -0.16, 0);
@@ -756,6 +787,15 @@ scene.add(arrows);
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0), _dir = new THREE.Vector3(), _pos = new THREE.Vector3();
 const _c = new THREE.Color();
+
+// one magnitude-to-size law shared by the plane and volume arrows:
+// length grows with log-magnitude from 0, hidden below a very low cutoff
+const ARROW_TMIN = 0.05;
+function arrowSize(t) {
+  if (t < ARROW_TMIN) return null;      // field essentially zero here: no arrow
+  return { len: 5.2 * t, w: 0.55 + 1.4 * t };
+}
+
 function updateArrows(cosT, sinT) {
   const isE = state.mode === 'E';
   const logLo = Math.log(isE ? E_LO : B_LO), logHi = Math.log(isE ? E_HI : B_HI);
@@ -765,11 +805,10 @@ function updateArrows(cosT, sinT) {
     const mag = Math.hypot(fx, fy);
     let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
     t = Math.min(Math.max(t, 0), 1);
-    const len = 1.1 + 3.4 * t;
-    const w = 0.9 + 1.0 * t;
+    const sz = arrowSize(t);
     _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
     _q.setFromUnitVectors(_up, _dir);
-    _s.set(w, len, w);
+    _s.set(sz ? sz.w : 0, sz ? sz.len : 0, sz ? sz.w : 0);
     const [cr, cg, cb] = cmapJS(0.22 + 0.78 * t, state.mode);  // colormap-matched, floor-lifted
     _c.setRGB(cr, cg, cb);
     for (const dz of [0.45, -0.45]) {
@@ -787,15 +826,22 @@ function updateArrows(cosT, sinT) {
 // ---------------------------------------------------------------- 3D volume mini-arrows
 // The field is invariant along the line, so each (x, y) column is computed once
 // and reused for every z — a full 3D quiver at the cost of a 2D one.
-const volCols = [];
-for (let x = -40; x <= 40; x += 6.4)
-  for (let y = 3; y <= 48; y += 5) volCols.push([x, y]);
+const VOL_COLS = 13, VOL_ROWS = [];
+for (let y = 3; y <= 48; y += 5) VOL_ROWS.push(y);
+let volCols = [];
+function buildVolGrid(X) {
+  volCols = [];
+  for (let c = 0; c < VOL_COLS; c++) {
+    const x = -X + 2 * X * c / (VOL_COLS - 1);
+    for (const y of VOL_ROWS) volCols.push([x, y]);
+  }
+}
+buildVolGrid(40);
 const volZs = [];
 for (let z = -128; z <= 128; z += 10.5) volZs.push(z);
-const N_VOL = volCols.length * volZs.length;
-const volGeo = arrowGeo.clone();
-volGeo.scale(0.55, 0.55, 0.55);
-const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
+const N_VOL = VOL_COLS * VOL_ROWS.length * volZs.length;
+const volGeo = arrowGeo;   // same glyph and size law as the cross-section arrows
+const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6 });
 const volArrows = new THREE.InstancedMesh(volGeo, volMat, N_VOL);
 volArrows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 volArrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N_VOL * 3), 3);
@@ -810,12 +856,11 @@ function updateVolArrows(cosT, sinT) {
     const mag = Math.hypot(fx, fy);
     let t = (Math.log(Math.max(mag, 1e-12)) - logLo) / (logHi - logLo);
     t = Math.min(Math.max(t, 0), 1);
-    const len = 0.9 + 2.8 * t;
-    const w = 0.85 + 0.9 * t;
+    const sz = arrowSize(t);
     _dir.set(fx / (mag || 1), fy / (mag || 1), 0);
     _q.setFromUnitVectors(_up, _dir);
-    _s.set(w, len, w);
-    const [cr, cg, cb] = cmapJS(0.2 + 0.8 * t, state.mode);
+    _s.set(sz ? sz.w : 0, sz ? sz.len : 0, sz ? sz.w : 0);
+    const [cr, cg, cb] = cmapJS(0.22 + 0.78 * t, state.mode);
     _c.setRGB(cr, cg, cb);
     for (const z of volZs) {
       _pos.set(x, y, z);
@@ -859,17 +904,33 @@ function drawChart() {
   ctx.clearRect(0, 0, W, H);
 
   const X0 = 78, X1 = W - 16, Y0 = 14, Y1 = H - 40;
-  const xMin = -40, xMax = 40, NPTS = 160;
+  const unit = v => isE ? v / 1000 : v * 1e6;   // kV/m or µT
+
+  // adaptive x range: extend until the field decays below 5% of its peak
+  let peak = 0, xEdge = 30;
+  for (let x = 0; x <= 150; x += 2) {
+    const v = Math.max(unit(rmsAt(x, state.probeH, state.mode)),
+                       unit(rmsAt(-x, state.probeH, state.mode)));
+    if (v > peak) peak = v;
+    if (v >= peak * 0.05) xEdge = x;
+  }
+  const xMax = Math.min(150, Math.max(30, Math.ceil(xEdge * 1.1 / 10) * 10));
+  const xMin = -xMax, NPTS = 160;
+
+  // fixed Y ceiling: 1.1 x the profile max at the height slider's maximum (10 m),
+  // so the axis holds still while the probe height moves
+  const PROBE_MAX = 10;
+  let peakTop = 0;
+  for (let x = 0; x <= 150; x += 2)
+    peakTop = Math.max(peakTop, unit(rmsAt(x, PROBE_MAX, state.mode)),
+                                unit(rmsAt(-x, PROBE_MAX, state.mode)));
+  const yMax = peakTop > 0 ? peakTop * 1.1 : 1;
+
   const ys = [];
-  let yMax = 0;
   for (let i = 0; i <= NPTS; i++) {
     const x = xMin + (xMax - xMin) * i / NPTS;
-    let v = rmsAt(x, state.probeH, state.mode);
-    v = isE ? v / 1000 : v * 1e6;
-    ys.push(v);
-    if (v > yMax) yMax = v;
+    ys.push(Math.min(unit(rmsAt(x, state.probeH, state.mode)), yMax));
   }
-  yMax = yMax > 0 ? yMax * 1.15 : 1;
 
   ctx.strokeStyle = '#26303f'; ctx.fillStyle = '#9fb0c4';
   ctx.font = '26px "Segoe UI"'; ctx.lineWidth = 1;
@@ -883,9 +944,10 @@ function drawChart() {
     ctx.fillText(yv.toPrecision(2), X0 - 6, yp);
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (let xv = -40; xv <= 40; xv += 20) {
-    const xp = X0 + (X1 - X0) * (xv - xMin) / (xMax - xMin);
-    ctx.fillText(xv + ' m', xp, Y1 + 6);
+  for (let g = 0; g <= 4; g++) {
+    const xv = xMin + (xMax - xMin) * g / 4;
+    const xp = X0 + (X1 - X0) * g / 4;
+    ctx.fillText(Math.round(xv) + ' m', xp, Y1 + 6);
   }
   ctx.beginPath();
   for (let i = 0; i <= NPTS; i++) {
@@ -893,10 +955,10 @@ function drawChart() {
     const yp = Y1 - (Y1 - Y0) * ys[i] / yMax;
     i === 0 ? ctx.moveTo(xp, yp) : ctx.lineTo(xp, yp);
   }
-  ctx.strokeStyle = isE ? '#7ad151' : '#5cc8ff';
+  ctx.strokeStyle = isE ? '#5cc8ff' : '#fca636';
   ctx.lineWidth = 3.5; ctx.stroke();
 
-  const hTxt = state.probeH + ' m';
+  const hTxt = state.probeH.toFixed(2) + ' m';
   document.getElementById('chartTitle').textContent = isE
     ? `E-field profile (rms, kV/m, at ${hTxt} height)`
     : `B-field profile (rms, µT, at ${hTxt} height)`;
@@ -942,12 +1004,34 @@ function drawPhasors(theta) {
 }
 
 // ---------------------------------------------------------------- UI wiring
+// shared significant-field extent: the arrow grids and the plane width follow
+// the same 5%-of-peak decay rule the profile chart uses (sampled at several
+// heights so it reflects the whole cross-section, not just the probe height)
+let fieldExtent = 0;
+function updateFieldExtent() {
+  let peak = 0, edge = 30;
+  for (let x = 0; x <= 150; x += 2.5) {
+    let v = 0;
+    for (const h of [1, 10, 25])
+      v = Math.max(v, rmsAt(x, h, state.mode), rmsAt(-x, h, state.mode));
+    if (v > peak) peak = v;
+    if (v >= peak * 0.05) edge = x;
+  }
+  const X = Math.min(150, Math.max(40, Math.ceil(edge * 1.1 / 10) * 10));
+  if (X === fieldExtent) return;
+  fieldExtent = X;
+  buildArrowGrid(X);
+  buildVolGrid(X);
+  fieldPlane.scale.x = Math.max(1, X / 48);   // widen the plane past its base ±48 m
+}
+
 let geomKey = '';
 function refreshAll() {
   solveLine();
   const key = [state.spacing, state.height, state.sag, state.nSub, state.bundleSpacing, state.shieldWires].join('|');
   if (key !== geomKey) { rebuildHardware(); geomKey = key; }
   fieldPlane.position.z = state.planeZ;
+  updateFieldExtent();
   pushUniforms();
   drawLegend();
   drawChart();
@@ -989,6 +1073,7 @@ function setMode(m) {
   state.mode = m;
   btnE.classList.toggle('active', m === 'E');
   btnB.classList.toggle('active', m === 'B');
+  updateFieldExtent();               // E and B decay differently
   pushUniforms(); drawLegend(); drawChart();
 }
 btnE.addEventListener('click', () => setMode('E'));
@@ -1005,25 +1090,33 @@ document.getElementById('cloudChk').addEventListener('change', e => {
   volArrows.visible = e.target.checked;
 });
 // bottom chips: field profile chart and phasor clock
+// on small screens the expanded Configuration sheet and these boxes are mutually
+// exclusive — opening one side closes the other
+const isMobile = () => innerWidth <= 700 || innerHeight <= 540;
 const phasorBox = document.getElementById('phasorBox');
 const chartBoxEl = document.getElementById('chartBox');
-function wireChip(chipId, boxEl) {
-  const chip = document.getElementById(chipId);
+const chipChartEl = document.getElementById('chipChart');
+const chipPhasorEl = document.getElementById('chipPhasor');
+function setBox(boxEl, chip, show) {
+  boxEl.style.display = show ? 'block' : 'none';
+  chip.classList.toggle('active', show);
+}
+function wireChip(chip, boxEl) {
   chip.addEventListener('click', () => {
     const show = boxEl.style.display === 'none';
-    boxEl.style.display = show ? 'block' : 'none';
-    chip.classList.toggle('active', show);
+    if (show && isMobile()) panelEl.classList.add('collapsed');
+    setBox(boxEl, chip, show);
   });
 }
-wireChip('chipChart', chartBoxEl);
-wireChip('chipPhasor', phasorBox);
+wireChip(chipChartEl, chartBoxEl);
+wireChip(chipPhasorEl, phasorBox);
 
 // probe height for the field profile (chart-only, no re-solve needed)
 const probeSlider = document.getElementById('probeSlider');
 paintSlider(probeSlider, true);
 probeSlider.addEventListener('input', () => {
   state.probeH = parseFloat(probeSlider.value);
-  document.getElementById('probeVal').textContent = state.probeH + ' m';
+  document.getElementById('probeVal').textContent = state.probeH.toFixed(2) + ' m';
   paintSlider(probeSlider, true);
   drawChart();
 });
@@ -1034,8 +1127,18 @@ document.getElementById('shieldChk').addEventListener('change', e => {
 
 // collapsible parameter panel (starts collapsed on small screens)
 const panelEl = document.getElementById('panel');
-document.getElementById('panelHead').addEventListener('click', () => panelEl.classList.toggle('collapsed'));
-if (innerWidth <= 700 || innerHeight <= 540) panelEl.classList.add('collapsed');
+document.getElementById('panelHead').addEventListener('click', () => {
+  const opening = panelEl.classList.contains('collapsed');
+  panelEl.classList.toggle('collapsed');
+  if (opening && isMobile()) {
+    setBox(chartBoxEl, chipChartEl, false);
+    setBox(phasorBox, chipPhasorEl, false);
+  }
+});
+if (isMobile()) {
+  panelEl.classList.add('collapsed');
+  setBox(chartBoxEl, chipChartEl, false);   // start clean on small screens
+}
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -1062,7 +1165,118 @@ function animate() {
 
 refreshAll();
 animate();
-window.__viz = { camera, controls, state, geom };
+window.__viz = { camera, controls, state, geom,
+  debug: () => ({ fieldExtent, planeScaleX: +fieldPlane.scale.x.toFixed(3),
+                  arrowXmax: Math.max(...arrowXs), volXmax: Math.max(...volCols.map(c => c[0])) }) };
+
+// ---------------------------------------------------------------- guided tour
+const TOUR_KEY = 'powerviz.tourDone';
+const tourDim = document.getElementById('tourDim');
+const tourRing = document.getElementById('tourRing');
+const tourCard = document.getElementById('tourCard');
+
+const tourSteps = [
+  { title: 'Welcome! ⚡', target: null,
+    text: 'A live 3D visualization of the electric and magnetic fields around a three-phase transmission line — solved from real physics in your browser and animated at a slowed-down 60 Hz.' },
+  { title: 'E field vs B field', target: '#modeBox',
+    text: 'Switch what you see. The E field scales with voltage, the B field with current — each has its own color palette.' },
+  { title: 'Color scale', target: '#legend',
+    text: 'The magnitude scale for the colored cross-section plane. It is logarithmic: from a weak field far away up to the intense field at the conductor surfaces.' },
+  { title: 'Explore in 3D', target: null,
+    text: 'Drag with one finger to orbit and pinch to zoom (on PC: drag, scroll, right-drag to pan). Look down the corridor to see the field arrows repeat along the whole line.' },
+  { title: 'Quick panels', target: '#chips',
+    text: 'These buttons open the field profile chart and the three-phase phasor clock. The ? replays this tour.' },
+  { title: 'Field profile', target: '#chartBox',
+    text: 'RMS field versus lateral distance at a probe height. Drag the small vertical slider to change the height — it starts at 1 m, the standard for EMF studies.',
+    enter() { this._was = chartBoxEl.style.display !== 'none';
+              if (isMobile()) panelEl.classList.add('collapsed');
+              setBox(chartBoxEl, chipChartEl, true); },
+    leave() { if (!this._was) setBox(chartBoxEl, chipChartEl, false); } },
+  { title: 'Configuration', target: '#panel',
+    text: 'Everything about the line lives here: voltage, current, spacing, height, sag, bundle geometry, shield wires, and the cross-section position along the span.',
+    enter() {
+      this._wasCollapsed = panelEl.classList.contains('collapsed');
+      this._chartWas = chartBoxEl.style.display !== 'none';
+      this._phasorWas = phasorBox.style.display !== 'none';
+      panelEl.classList.remove('collapsed');
+      if (isMobile()) { setBox(chartBoxEl, chipChartEl, false); setBox(phasorBox, chipPhasorEl, false); }
+    },
+    leave() {
+      if (this._wasCollapsed) panelEl.classList.add('collapsed');
+      if (isMobile()) { setBox(chartBoxEl, chipChartEl, this._chartWas); setBox(phasorBox, chipPhasorEl, this._phasorWas); }
+    } },
+  { title: 'You are set! 🎉', target: null,
+    text: 'Try it: raise the current and watch B grow while E stays put — or add subconductors and watch the surface field relax. Replay this tour anytime with the ? button.' },
+];
+
+let tourIdx = -1;
+
+function positionTour() {
+  if (tourIdx < 0) return;
+  const step = tourSteps[tourIdx];
+  const vw = innerWidth, vh = innerHeight;
+  tourCard.style.width = Math.min(360, vw - 24) + 'px';
+  const ch = tourCard.offsetHeight, cw = tourCard.offsetWidth;
+  const el = step.target && document.querySelector(step.target);
+  if (el) {
+    const r = el.getBoundingClientRect();
+    tourDim.style.display = 'none';
+    tourRing.style.display = 'block';
+    tourRing.style.left = (r.left - 6) + 'px';
+    tourRing.style.top = (r.top - 6) + 'px';
+    tourRing.style.width = (r.width + 12) + 'px';
+    tourRing.style.height = (r.height + 12) + 'px';
+    if (r.top + r.height / 2 < vh / 2) {           // target in top half -> card below
+      tourCard.style.top = Math.max(12, Math.min(r.bottom + 16, vh - ch - 12)) + 'px';
+      tourCard.style.bottom = 'auto';
+    } else {                                        // target in bottom half -> card above
+      tourCard.style.bottom = Math.max(12, Math.min(vh - r.top + 16, vh - ch - 12)) + 'px';
+      tourCard.style.top = 'auto';
+    }
+    const cx = r.left + r.width / 2;
+    tourCard.style.left = Math.max(12, Math.min(cx - cw / 2, vw - cw - 12)) + 'px';
+  } else {
+    tourRing.style.display = 'none';
+    tourDim.style.display = 'block';
+    tourCard.style.top = Math.max(12, (vh - ch) / 2) + 'px';
+    tourCard.style.bottom = 'auto';
+    tourCard.style.left = Math.max(12, (vw - cw) / 2) + 'px';
+  }
+}
+
+function showTourStep(i) {
+  if (tourIdx >= 0 && tourSteps[tourIdx].leave) tourSteps[tourIdx].leave();
+  tourIdx = i;
+  const step = tourSteps[i];
+  if (step.enter) step.enter();
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourText').textContent = step.text;
+  document.getElementById('tourStepNum').textContent = (i + 1) + ' / ' + tourSteps.length;
+  document.getElementById('tourBack').disabled = i === 0;
+  document.getElementById('tourNext').textContent = i === tourSteps.length - 1 ? 'Done' : 'Next';
+  tourCard.style.display = 'block';
+  positionTour();                        // sync: rAF can be suspended in hidden tabs
+  requestAnimationFrame(positionTour);   // and again after enter() layout settles
+}
+
+function endTour() {
+  if (tourIdx >= 0 && tourSteps[tourIdx].leave) tourSteps[tourIdx].leave();
+  tourIdx = -1;
+  tourDim.style.display = tourRing.style.display = tourCard.style.display = 'none';
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch {}
+}
+
+document.getElementById('tourNext').addEventListener('click', () =>
+  tourIdx === tourSteps.length - 1 ? endTour() : showTourStep(tourIdx + 1));
+document.getElementById('tourBack').addEventListener('click', () =>
+  tourIdx > 0 && showTourStep(tourIdx - 1));
+document.getElementById('tourSkip').addEventListener('click', endTour);
+document.getElementById('chipTour').addEventListener('click', () => showTourStep(0));
+addEventListener('resize', () => requestAnimationFrame(positionTour));
+
+let tourSeen = false;
+try { tourSeen = !!localStorage.getItem(TOUR_KEY); } catch {}
+if (!tourSeen) setTimeout(() => showTourStep(0), 800);
 </script>
 </body>
 </html>
