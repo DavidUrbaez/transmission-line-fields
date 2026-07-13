@@ -49,9 +49,22 @@
   #readout { margin-top: 10px; padding-top: 9px; border-top: 1px solid #222c3b; font-size: 11.5px; color: #93a0b4; line-height: 1.7; }
   #readout b { color: #ffd479; font-weight: 600; }
 
-  #modeBox { top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px;
+  #modeBox { top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 5px;
              background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 6px; }
+  #modeBox .mode-row { display: flex; gap: 6px; margin: 0; }
   #modeBox .mode-btn { width: 96px; }
+  /* E/B: joined segmented pair (pick one) */
+  .mode-row.seg { gap: 0; }
+  .mode-row.seg .mode-btn:first-child { border-radius: 6px 0 0 6px; }
+  .mode-row.seg .mode-btn:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  /* Vectors/Contours: independent pill toggles with a status dot */
+  .tog-btn { width: 96px; padding: 6px 0; font-size: 12px; font-weight: 600; border-radius: 999px;
+             border: 1px solid #2c3850; background: #10151f; color: #7f8ca0; cursor: pointer;
+             display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .tog-btn::before { content: ''; width: 7px; height: 7px; border-radius: 50%;
+                     background: #4a5568; transition: background 0.15s; }
+  .tog-btn.active { color: #dfe8f4; border-color: #3a4a66; background: #17202e; }
+  .tog-btn.active::before { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.55); }
 
   #chips { left: 16px; bottom: 14px; display: flex; gap: 8px; }
   .chip { padding: 7px 12px; font-size: 12px; font-weight: 600; border-radius: 8px;
@@ -106,7 +119,7 @@
              padding: 10px 14px; }
     input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
     #modeBox { top: 8px; left: auto; right: 8px; transform: none; padding: 4px; }
-    #modeBox .mode-btn { width: 72px; padding: 6px 0; }
+    #modeBox .mode-btn, #modeBox .tog-btn { width: 72px; padding: 6px 0; }
     #chips { left: 8px; right: 8px; bottom: 8px; }
     #chartBox { left: 8px; bottom: 100px; padding: 6px 8px 4px; }
     #chartCanvas { width: min(300px, calc(100vw - 118px)); height: auto; aspect-ratio: 680 / 260; }
@@ -127,8 +140,10 @@
 <div id="app"></div>
 
 <div id="modeBox" class="overlay">
-  <button id="btnE" class="mode-btn active">E field</button>
-  <button id="btnB" class="mode-btn">B field</button>
+  <div class="mode-row seg"><button id="btnE" class="mode-btn active">E field</button>
+    <button id="btnB" class="mode-btn">B field</button></div>
+  <div class="mode-row"><button id="btnVec" class="tog-btn active">Vectors</button>
+    <button id="btnPot" class="tog-btn">Contours</button></div>
 </div>
 
 <div id="legend" class="overlay">
@@ -138,7 +153,7 @@
     <div id="legendLabels">
       <span id="legHi"></span>
       <span id="legMid"></span>
-      <span id="legLoWrap"><input type="number" id="loInput" value="800"><span id="loUnit">V/m</span></span>
+      <span id="legLoWrap"><input type="number" id="loInput" value="800"><span id="loUnit">V/m</span><span id="legLoTxt" style="display:none"></span></span>
     </div>
   </div>
 </div>
@@ -164,11 +179,15 @@
     <input type="range" id="dSlider" min="10" max="50" step="0.1" value="25.1"></div>
   <div class="ctl"><label>Animation speed <b id="aVal"></b></label>
     <input type="range" id="aSlider" min="0" max="1" step="0.05" value="0.25"></div>
-  <div class="ctl"><label>Cross-section position <b id="zVal"></b></label>
+  <div class="ctl plane-ctl"><label>Cross-section position <b id="zVal"></b></label>
     <input type="range" id="zSlider" min="-130" max="130" step="1" value="0"></div>
+  <div class="ctl plane-ctl"><label>Cross-section opacity <b id="paVal"></b></label>
+    <input type="range" id="paSlider" min="0.1" max="1" step="0.01" value="0.94"></div>
   <h2 style="margin-top:12px">View</h2>
   <div class="check-row"><input type="checkbox" id="planeChk" checked><label for="planeChk">Cross-section plane (2D)</label></div>
   <div class="check-row"><input type="checkbox" id="cloudChk" checked><label for="cloudChk">3D field arrows (volume)</label></div>
+  <div class="check-row"><input type="checkbox" id="sheetsChk" checked><label for="sheetsChk">3D contour sheets (contours view)</label></div>
+  <div class="check-row"><input type="checkbox" id="zeroChk"><label for="zeroChk">Zero-potential plane (contours view)</label></div>
   <div class="check-row"><input type="checkbox" id="arrowsChk" checked><label for="arrowsChk">Field direction arrows</label></div>
   <div class="check-row"><input type="checkbox" id="shieldChk" checked><label for="shieldChk">Shield wires (grounded, in E-field solve)</label></div>
   <div id="readout"></div>
@@ -190,6 +209,7 @@
 <div id="chips" class="overlay">
   <button id="chipChart" class="chip active">Field profile</button>
   <button id="chipPhasor" class="chip">Phase voltages</button>
+  <button id="chipRotate" class="chip" title="Auto-rotate the camera">↻ Rotate</button>
   <button id="chipTour" class="chip" title="Guided tour">?</button>
 </div>
 
@@ -236,6 +256,8 @@ const B_LO = 2e-7,  B_HI = 1e-3;  // T
 // ---------------------------------------------------------------- state
 const state = {
   mode: 'E',
+  showVectors: true,              // vector layer: field arrows (2D + 3D)
+  showContours: false,            // contour layer: potential plane + 3D sheets
   vLL: 345e3,
   iRms: 1000,
   spacing: 9,
@@ -250,6 +272,11 @@ const state = {
   eLoExp: Math.log10(800),        // log-scale floor for E: 800 V/m default
   bLoExp: Math.log10(5e-6),       // log-scale floor for B: 5 µT default
   showArrows: true,
+  showVolArrows: true,
+  showSheets: true,               // extruded iso-potential sheets in contours view
+  showPlane: true,                // cross-section colored plane + its in-plane arrows
+  planeAlpha: 0.94,               // cross-section plane opacity
+  showZero: false,                // zero-potential plane/contour in the contours view
   shieldWires: true,
 };
 const activeLo = () => 10 ** (state.mode === 'E' ? state.eLoExp : state.bLoExp);
@@ -299,32 +326,35 @@ function solveLinearSystem(A, b) {
 function bundleOffsets() {
   const n = state.nSub;
   const Rb = n === 1 ? 0 : state.bundleSpacing / (2 * Math.sin(Math.PI / n));
+  // real-world orientations: twin = horizontal side-by-side, triple = apex up,
+  // quad = flat square (two up, two down)
+  const start = n === 2 ? 0 : n === 4 ? Math.PI / 4 : Math.PI / 2;
   const offs = [];
   for (let k = 0; k < n; k++) {
-    const a = 2 * Math.PI * k / n + Math.PI / 2;
+    const a = 2 * Math.PI * k / n + start;
     offs.push([Rb * Math.cos(a), Rb * Math.sin(a)]);
   }
   return offs;
 }
 
-function solveLine() {
+function solveSliceConductors(z) {
   const g = geom();
   const Vpk = state.vLL * Math.sqrt(2) / Math.sqrt(3);
   const Ipk = state.iRms * Math.sqrt(2) / state.nSub;
   const offs = bundleOffsets();
 
-  // conductor heights at the cross-section's position along the span (sag)
+  // conductor heights at this position along the span (sag)
   const HS = SPAN / 2;
-  const sagT = 1 - (state.planeZ / HS) ** 2;    // 1 at midspan, 0 at the towers
+  const sagT = 1 - (z / HS) ** 2;               // 1 at midspan, 0 at the towers
   const condY = g.hAtt - state.sag * sagT;
   const shieldY = g.shieldPeakY - g.shieldSag * sagT;
   const condRadius = state.condDiam / 2000;     // mm diameter -> m radius
 
-  conductors = [];
+  const conds = [];
   for (let ph = 0; ph < 3; ph++) {
     const cx = (ph - 1) * state.spacing;
     for (const [ox, oy] of offs) {
-      conductors.push({
+      conds.push({
         x: cx + ox, y: condY + oy, radius: condRadius, shield: false,
         vRe: Vpk * Math.cos(PHASE_ANGLES[ph]), vIm: Vpk * Math.sin(PHASE_ANGLES[ph]),
         iRe: Ipk * Math.cos(PHASE_ANGLES[ph]), iIm: Ipk * Math.sin(PHASE_ANGLES[ph]),
@@ -334,7 +364,7 @@ function solveLine() {
   }
   if (state.shieldWires) {
     for (const sx of [-g.shieldX, g.shieldX]) {
-      conductors.push({
+      conds.push({
         x: sx, y: shieldY, radius: SHIELD_RADIUS, shield: true,
         vRe: 0, vIm: 0, iRe: 0, iIm: 0, qRe: 0, qIm: 0,   // grounded; induced charge from the solve
       });
@@ -342,25 +372,35 @@ function solveLine() {
   }
 
   // Maxwell potential coefficients with ground images: P_ij = ln(D'ij / Dij) / (2 pi eps0)
-  const N = conductors.length;
+  const N = conds.length;
   const P = [];
   for (let i = 0; i < N; i++) {
     P.push(new Array(N));
     for (let j = 0; j < N; j++) {
-      const ci = conductors[i], cj = conductors[j];
+      const ci = conds[i], cj = conds[j];
       const dImg = Math.hypot(ci.x - cj.x, ci.y + cj.y);
       const d = i === j ? ci.radius : Math.hypot(ci.x - cj.x, ci.y - cj.y);
       P[i][j] = Math.log(dImg / d) / (2 * Math.PI * EPS0);
     }
   }
-  const qRe = solveLinearSystem(P.map(r => r.slice()), conductors.map(c => c.vRe));
-  const qIm = solveLinearSystem(P.map(r => r.slice()), conductors.map(c => c.vIm));
-  conductors.forEach((c, i) => { c.qRe = qRe[i]; c.qIm = qIm[i]; });
+  const qRe = solveLinearSystem(P.map(r => r.slice()), conds.map(c => c.vRe));
+  const qIm = solveLinearSystem(P.map(r => r.slice()), conds.map(c => c.vIm));
+  conds.forEach((c, i) => { c.qRe = qRe[i]; c.qIm = qIm[i]; });
+  return conds;
 }
 
-function fieldAt(x, y, cosT, sinT, mode) {
+// two solves: `conductors` follows the cross-section slider (plane, plane
+// arrows, chart); `conductorsMid` is the fixed midspan reference used by
+// everything that spans the whole corridor (volume arrows, sheets, extent)
+let conductorsMid = [];
+function solveLine() {
+  conductors = solveSliceConductors(state.planeZ);
+  conductorsMid = state.planeZ === 0 ? conductors : solveSliceConductors(0);
+}
+
+function fieldAt(x, y, cosT, sinT, mode, set = conductors) {
   let fx = 0, fy = 0;
-  for (const c of conductors) {
+  for (const c of set) {
     if (mode === 'E') {
       const q = c.qRe * cosT - c.qIm * sinT;
       let dx = x - c.x, dy = y - c.y, r2 = Math.max(dx * dx + dy * dy, 1e-6);
@@ -381,9 +421,9 @@ function fieldAt(x, y, cosT, sinT, mode) {
   return [fx, fy];
 }
 
-function rmsAt(x, y, mode) {
+function rmsAt(x, y, mode, set = conductors) {
   let fxRe = 0, fxIm = 0, fyRe = 0, fyIm = 0;
-  for (const c of conductors) {
+  for (const c of set) {
     if (mode === 'E') {
       let dx = x - c.x, dy = y - c.y, r2 = Math.max(dx * dx + dy * dy, 1e-6);
       let k = 1 / (2 * Math.PI * EPS0 * r2);
@@ -402,6 +442,28 @@ function rmsAt(x, y, mode) {
     }
   }
   return Math.sqrt((fxRe * fxRe + fxIm * fxIm + fyRe * fyRe + fyIm * fyIm) / 2);
+}
+
+// potential phasor at a point: V (E mode, ground images) or A_z (B mode).
+// Time-independent, so grids of these are precomputed per configuration.
+function potPhasorAt(x, y, set = conductors) {
+  let re = 0, im = 0;
+  for (const c of set) {
+    const d1 = Math.max(Math.hypot(x - c.x, y - c.y), 1e-3);
+    if (state.mode === 'E') {
+      const d2 = Math.max(Math.hypot(x - c.x, y + c.y), 1e-3);
+      const k = Math.log(d2 / d1) / (2 * Math.PI * EPS0);
+      re += k * c.qRe; im += k * c.qIm;
+    } else {
+      const k = -MU0 / (2 * Math.PI) * Math.log(d1);
+      re += k * c.iRe; im += k * c.iIm;
+    }
+  }
+  return [re, im];
+}
+function potAmpAt(x, y) {
+  const [re, im] = potPhasorAt(x, y);
+  return Math.hypot(re, im);
 }
 
 // ---------------------------------------------------------------- colormaps (E = ice, B = plasma)
@@ -658,6 +720,11 @@ const fieldUniforms = {
   uMode:  { value: 0 },
   uLogLo: { value: Math.log(E_LO) },
   uLogHi: { value: Math.log(E_HI) },
+  uView:  { value: 0 },
+  uPotScale: { value: 1 },
+  uContourStep: { value: 1 },
+  uShowZero: { value: 0 },
+  uAlpha: { value: 0.94 },
 };
 
 // shared GLSL: uniforms, colormaps, and the 2D field superposition
@@ -722,6 +789,44 @@ const FIELD_GLSL = /* glsl */`
     float mag = length(fieldVec(p));
     return clamp((log(max(mag, 1e-12)) - uLogLo) / (uLogHi - uLogLo), 0.0, 1.0);
   }
+
+  // scalar potential: V (E mode, with ground images) or A_z (B mode; its
+  // iso-lines are the magnetic field lines). Balanced sources keep A_z finite.
+  uniform int uView;          // 0 = vector magnitude, 1 = potential contours
+  uniform float uPotScale;    // color saturation amplitude
+  uniform float uContourStep; // physical units per iso-line
+  uniform float uShowZero;    // 1 = highlight the zero-potential contour, 0 = hide
+  float potential(vec2 p) {
+    float pot = 0.0;
+    for (int j = 0; j < MAXC; j++) {
+      if (j >= uNum) break;
+      float src = uSrcRe[j] * uCosT - uSrcIm[j] * uSinT;
+      float d1 = max(length(p - uPos[j]), 1e-3);
+      if (uMode == 0) {
+        float d2 = max(length(p - vec2(uPos[j].x, -uPos[j].y)), 1e-3);
+        pot += src / (TWO_PI * EPS0) * log(d2 / d1);
+      } else {
+        pot += -MU0 * src / TWO_PI * log(d1);
+      }
+    }
+    return pot;
+  }
+  vec3 divmap(float v) {   // -1 .. +1, dark at zero
+    v = clamp(v, -1.0, 1.0);
+    vec3 z0 = vec3(0.05, 0.06, 0.10);
+    vec3 n1, n5, p5, p1;
+    if (uMode == 0) {        // E potential: blue <-> orange
+      n1 = vec3(0.25, 0.65, 1.00); n5 = vec3(0.12, 0.35, 0.62);
+      p5 = vec3(0.65, 0.28, 0.12); p1 = vec3(1.00, 0.60, 0.22);
+    } else {                 // B flux lines: green <-> magenta
+      n1 = vec3(0.30, 0.95, 0.55); n5 = vec3(0.10, 0.45, 0.32);
+      p5 = vec3(0.55, 0.15, 0.62); p1 = vec3(0.95, 0.45, 1.00);
+    }
+    if (v < -0.5) return mix(n1, n5, (v + 1.0) * 2.0);
+    if (v <  0.0) return mix(n5, z0, (v + 0.5) * 2.0);
+    if (v <  0.5) return mix(z0, p5, v * 2.0);
+    return mix(p5, p1, (v - 0.5) * 2.0);
+  }
 `;
 
 const fieldPlane = new THREE.Mesh(
@@ -740,10 +845,25 @@ const fieldPlane = new THREE.Mesh(
     fragmentShader: /* glsl */`
       precision highp float;
       ${FIELD_GLSL}
+      uniform float uAlpha;
       varying vec2 vWorld;
       void main() {
-        gl_FragColor = vec4(cmap(fieldT(vWorld)), 0.94);
+        if (uView == 1) {
+          float pot = potential(vWorld);
+          vec3 col = divmap(pot / uPotScale);
+          float c = pot / uContourStep;
+          float w = max(fwidth(c), 1e-4);
+          float iso = 1.0 - smoothstep(0.0, w * 1.4, abs(fract(c + 0.5) - 0.5));
+          col = mix(col, vec3(0.92, 0.95, 1.0), iso * 0.7);
+          float z = 1.0 - smoothstep(0.0, w * 2.0, abs(c));   // highlight the zero contour
+          vec3 zeroCol = uMode == 0 ? vec3(0.35, 1.0, 0.85) : vec3(1.0, 1.0, 1.0);
+          col = mix(col, zeroCol, z * 0.85 * uShowZero);
+          gl_FragColor = vec4(col, uAlpha);
+        } else {
+          gl_FragColor = vec4(cmap(fieldT(vWorld)), uAlpha);
+        }
       }`,
+    extensions: { derivatives: true },
   })
 );
 fieldPlane.position.set(0, PLANE_H / 2, 0);
@@ -766,6 +886,20 @@ function pushUniforms() {
   fieldUniforms.uMode.value = state.mode === 'E' ? 0 : 1;
   fieldUniforms.uLogLo.value = Math.log(activeLo());
   fieldUniforms.uLogHi.value = Math.log(state.mode === 'E' ? E_HI : B_HI);
+  fieldUniforms.uView.value = state.showContours ? 1 : 0;
+  fieldUniforms.uShowZero.value = state.showZero ? 1 : 0;
+  if (state.showContours) {
+    // saturation amplitude: max potential phasor over the significant region
+    const ext = fieldExtent || 40;
+    let m = 0;
+    for (let xi = 0; xi <= 12; xi++)
+      for (let yi = 0; yi <= 7; yi++)
+        m = Math.max(m, potAmpAt(-ext + 2 * ext * xi / 12, 1 + 46 * yi / 7));
+    fieldUniforms.uPotScale.value = m > 0 ? m : 1;
+    fieldUniforms.uContourStep.value = (m > 0 ? m : 1) / 8;
+    buildPotGrid();
+  }
+  sheets.material.uniforms.uSagAmp.value = state.sag;
 }
 
 // ---------------------------------------------------------------- direction arrows (instanced cones)
@@ -864,11 +998,15 @@ volArrows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 volArrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N_VOL * 3), 3);
 scene.add(volArrows);
 
+// vertical offset of the whole field pattern along the span (follows the sag)
+const sagLift = z => state.sag * (z / (SPAN / 2)) ** 2;
+
 function updateVolArrows(cosT, sinT) {
   const isE = state.mode === 'E';
+  const lifts = volZs.map(sagLift);
   let idx = 0;
   for (const [x, y] of volCols) {
-    const [fx, fy] = fieldAt(x, y, cosT, sinT, state.mode);
+    const [fx, fy] = fieldAt(x, y, cosT, sinT, state.mode, conductorsMid);
     const mag = Math.hypot(fx, fy);
     const t = magT(mag, isE);
     const sz = arrowSize(t);
@@ -877,8 +1015,8 @@ function updateVolArrows(cosT, sinT) {
     _s.set(sz ? sz.w : 0, sz ? sz.len : 0, sz ? sz.w : 0);
     const [cr, cg, cb] = cmapJS(0.22 + 0.78 * t, state.mode);
     _c.setRGB(cr, cg, cb);
-    for (const z of volZs) {
-      _pos.set(x, y, z);
+    for (let zi = 0; zi < volZs.length; zi++) {
+      _pos.set(x, y + lifts[zi], volZs[zi]);
       _m.compose(_pos, _q, _s);
       volArrows.setMatrixAt(idx, _m);
       volArrows.setColorAt(idx, _c);
@@ -889,24 +1027,199 @@ function updateVolArrows(cosT, sinT) {
   volArrows.instanceColor.needsUpdate = true;
 }
 
+// ---------------------------------------------------------------- 3D iso-potential sheets
+// Level sets of V (or A_z) extruded along the line into translucent surfaces.
+// Marching squares runs on a precomputed phasor grid every frame; only the
+// two multiplies per node depend on time.
+const SHEET_NX = 120, SHEET_NY = 60;          // cells; nodes are +1
+const SHEET_Z = 110, SHEET_FADE = 35;         // extrusion half-length, end fade (m)
+const SHEET_BANDS = 8;                        // z subdivisions so sheets can follow the sag
+const SHEET_MAXQUAD = 24000;                  // total quad budget (segments x bands)
+const BAND_Z = [];
+for (let k = 0; k <= SHEET_BANDS; k++) BAND_Z.push(-SHEET_Z + 2 * SHEET_Z * k / SHEET_BANDS);
+const sheetPotRe = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+const sheetPotIm = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+const sheetPotNow = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+let sheetXs = new Float32Array(SHEET_NX + 1);
+const sheetYs = new Float32Array(SHEET_NY + 1);
+for (let j = 0; j <= SHEET_NY; j++) sheetYs[j] = 50 * j / SHEET_NY;
+
+let sheetScale = 1;   // sheet level normalization from the midspan solve
+function buildPotGrid() {
+  const ext = fieldExtent || 40;
+  for (let i = 0; i <= SHEET_NX; i++) sheetXs[i] = -ext + 2 * ext * i / SHEET_NX;
+  let n = 0, m = 0;
+  for (let j = 0; j <= SHEET_NY; j++)
+    for (let i = 0; i <= SHEET_NX; i++, n++) {
+      const [re, im] = potPhasorAt(sheetXs[i], sheetYs[j], conductorsMid);
+      sheetPotRe[n] = re; sheetPotIm[n] = im;
+      const a = Math.hypot(re, im);
+      if (a > m) m = a;
+    }
+  sheetScale = m > 0 ? m : 1;
+}
+
+const sheetGeo = new THREE.BufferGeometry();
+const sheetPos = new Float32Array(SHEET_MAXQUAD * 6 * 3);
+const sheetCol = new Float32Array(SHEET_MAXQUAD * 6 * 3);
+const sheetAlp = new Float32Array(SHEET_MAXQUAD * 6);
+sheetGeo.setAttribute('position', new THREE.BufferAttribute(sheetPos, 3).setUsage(THREE.DynamicDrawUsage));
+sheetGeo.setAttribute('color', new THREE.BufferAttribute(sheetCol, 3).setUsage(THREE.DynamicDrawUsage));
+sheetGeo.setAttribute('aAlpha', new THREE.BufferAttribute(sheetAlp, 1).setUsage(THREE.DynamicDrawUsage));
+const sheets = new THREE.Mesh(sheetGeo, new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  uniforms: { uSagAmp: { value: 7 } },
+  vertexShader: /* glsl */`
+    uniform float uSagAmp;
+    attribute float aAlpha;
+    varying vec3 vColor;
+    varying float vAlpha;
+    varying float vZ;
+    void main() {
+      vColor = color;
+      vAlpha = aAlpha;
+      vZ = position.z;
+      vec3 p = position;
+      float zn = p.z / ${(SPAN / 2).toFixed(1)};
+      p.y += uSagAmp * zn * zn;              // follow the conductor sag along the span
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec3 vColor;
+    varying float vAlpha;
+    varying float vZ;
+    void main() {
+      float a = vAlpha * smoothstep(${SHEET_Z.toFixed(1)}, ${(SHEET_Z - SHEET_FADE).toFixed(1)}, abs(vZ));
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor, a);
+    }`,
+  vertexColors: true,
+}));
+sheets.frustumCulled = false;
+sheets.renderOrder = 2;
+sheets.visible = false;
+scene.add(sheets);
+
+// marching-squares edge pairs per case (edges: 0 bottom, 1 right, 2 top, 3 left)
+const MS_TABLE = [
+  [], [[0, 3]], [[0, 1]], [[3, 1]],
+  [[1, 2]], [[0, 3], [1, 2]], [[0, 2]], [[3, 2]],
+  [[3, 2]], [[0, 2]], [[0, 1], [2, 3]], [[1, 2]],
+  [[3, 1]], [[0, 1]], [[0, 3]], [],
+];
+
+function updateSheets(cosT, sinT) {
+  const NN = (SHEET_NX + 1) * (SHEET_NY + 1);
+  for (let n = 0; n < NN; n++) sheetPotNow[n] = sheetPotRe[n] * cosT - sheetPotIm[n] * sinT;
+
+  const scale = sheetScale;
+  const levels = [], colors = [], alphas = [];
+  if (state.showZero) { levels.push(0); colors.push(state.mode === 'E' ? [0.35, 1.0, 0.85] : [1.0, 1.0, 1.0]); alphas.push(0.5); }
+  for (const f of [0.15, 0.35, 0.6]) {
+    for (const s of [1, -1]) {
+      levels.push(s * f * scale);
+      colors.push(divmapJS(s * (0.45 + 0.55 * f)).map(c => Math.min(c * 1.25, 1)));
+      alphas.push(0.26);
+    }
+  }
+
+  let quad = 0;
+  const ex = [0, 0, 0, 0], ey = [0, 0, 0, 0];   // interpolated crossing per edge
+  for (let li = 0; li < levels.length; li++) {
+    const L = levels[li], [cr, cg, cb] = colors[li], al = alphas[li];
+    for (let j = 0; j < SHEET_NY && quad + SHEET_BANDS <= SHEET_MAXQUAD; j++) {
+      const row = j * (SHEET_NX + 1);
+      for (let i = 0; i < SHEET_NX; i++) {
+        const va = sheetPotNow[row + i] - L;
+        const vb = sheetPotNow[row + i + 1] - L;
+        const vc = sheetPotNow[row + SHEET_NX + 1 + i + 1] - L;
+        const vd = sheetPotNow[row + SHEET_NX + 1 + i] - L;
+        const code = (va > 0 ? 1 : 0) | (vb > 0 ? 2 : 0) | (vc > 0 ? 4 : 0) | (vd > 0 ? 8 : 0);
+        if (code === 0 || code === 15) continue;
+        const x0 = sheetXs[i], x1 = sheetXs[i + 1], y0 = sheetYs[j], y1 = sheetYs[j + 1];
+        // edge crossings (linear interpolation)
+        ex[0] = x0 + (x1 - x0) * va / (va - vb); ey[0] = y0;          // bottom a-b
+        ex[1] = x1; ey[1] = y0 + (y1 - y0) * vb / (vb - vc);          // right  b-c
+        ex[2] = x0 + (x1 - x0) * vd / (vd - vc); ey[2] = y1;          // top    d-c
+        ex[3] = x0; ey[3] = y0 + (y1 - y0) * va / (va - vd);          // left   a-d
+        for (const [e1, e2] of MS_TABLE[code]) {
+          if (quad + SHEET_BANDS > SHEET_MAXQUAD) break;
+          const ax = ex[e1], ay = ey[e1], bx = ex[e2], by = ey[e2];
+          // one strip of quads along z; the vertex shader adds the sag bend
+          for (let k = 0; k < SHEET_BANDS; k++) {
+            const z0 = BAND_Z[k], z1 = BAND_Z[k + 1];
+            const p = quad * 18, q = quad * 6;
+            sheetPos.set([ax, ay, z0, bx, by, z0, bx, by, z1,
+                          ax, ay, z0, bx, by, z1, ax, ay, z1], p);
+            for (let v = 0; v < 6; v++) {
+              sheetCol[p + v * 3] = cr; sheetCol[p + v * 3 + 1] = cg; sheetCol[p + v * 3 + 2] = cb;
+              sheetAlp[q + v] = al;
+            }
+            quad++;
+          }
+        }
+      }
+    }
+  }
+  sheetGeo.setDrawRange(0, quad * 6);
+  sheetGeo.attributes.position.needsUpdate = true;
+  sheetGeo.attributes.color.needsUpdate = true;
+  sheetGeo.attributes.aAlpha.needsUpdate = true;
+}
+
+function syncSheetsVisible() {
+  sheets.visible = state.showSheets && state.showContours;
+}
+
 // ---------------------------------------------------------------- legend
 function fmtE(v) { return v >= 1000 ? (v / 1000).toLocaleString() + ' kV/m' : v + ' V/m'; }
 function fmtB(v) { return (v * 1e6).toLocaleString() + ' µT'; }
+// divergent stops [neg extreme, neg mid, zero, pos mid, pos extreme]; per mode so
+// E potential (blue<->orange) and B flux lines (green<->magenta) read differently
+const DIVMAP_E = [[0.25, 0.65, 1.0], [0.12, 0.35, 0.62], [0.05, 0.06, 0.10], [0.65, 0.28, 0.12], [1.0, 0.60, 0.22]];
+const DIVMAP_B = [[0.30, 0.95, 0.55], [0.10, 0.45, 0.32], [0.05, 0.06, 0.10], [0.55, 0.15, 0.62], [0.95, 0.45, 1.0]];
+function divmapJS(v) {
+  v = Math.min(Math.max(v, -1), 1);
+  const S = state.mode === 'E' ? DIVMAP_E : DIVMAP_B;
+  const t = (v + 1) / 2 * 4, i = Math.min(Math.floor(t), 3), fr = t - i;
+  return S[i].map((c, k) => c + (S[i + 1][k] - c) * fr);
+}
+function fmtPot(v) {
+  return state.mode === 'E'
+    ? Number((v / 1000).toPrecision(3)).toLocaleString() + ' kV'
+    : Number((v * 1000).toPrecision(2)) + ' mWb/m';
+}
 function drawLegend() {
   const cv = document.getElementById('legendCanvas');
   const ctx = cv.getContext('2d');
+  const isE = state.mode === 'E';
+  const isPot = state.showContours;
   for (let i = 0; i < cv.height; i++) {
-    const [r, g, b] = cmapJS(1 - i / (cv.height - 1), state.mode);
+    const t = 1 - i / (cv.height - 1);
+    const [r, g, b] = isPot ? divmapJS(t * 2 - 1) : cmapJS(t, state.mode);
     ctx.fillStyle = `rgb(${r * 255},${g * 255},${b * 255})`;
     ctx.fillRect(0, i, cv.width, 1);
   }
-  const isE = state.mode === 'E';
-  document.getElementById('legendTitle').textContent = isE ? '|E| field' : '|B| field';
-  const f = isE ? fmtE : fmtB;
-  const lo = activeLo(), hi = isE ? E_HI : B_HI;
-  const mid = Math.exp((Math.log(lo) + Math.log(hi)) / 2);
-  document.getElementById('legHi').textContent = '≥ ' + f(hi);
-  document.getElementById('legMid').textContent = f(Number(mid.toPrecision(1)));
+  document.getElementById('loInput').style.display = isPot ? 'none' : '';
+  document.getElementById('loUnit').style.display = isPot ? 'none' : '';
+  document.getElementById('legLoTxt').style.display = isPot ? '' : 'none';
+  if (isPot) {
+    const s = fieldUniforms.uPotScale.value;
+    document.getElementById('legendTitle').textContent = isE ? 'V potential' : 'Flux lines (Aᴢ)';
+    document.getElementById('legHi').textContent = '+ ' + fmtPot(s);
+    document.getElementById('legMid').textContent = '0';
+    document.getElementById('legLoTxt').textContent = '− ' + fmtPot(s);
+  } else {
+    document.getElementById('legendTitle').textContent = isE ? '|E| field' : '|B| field';
+    const f = isE ? fmtE : fmtB;
+    const lo = activeLo(), hi = isE ? E_HI : B_HI;
+    const mid = Math.exp((Math.log(lo) + Math.log(hi)) / 2);
+    document.getElementById('legHi').textContent = '≥ ' + f(hi);
+    document.getElementById('legMid').textContent = f(Number(mid.toPrecision(1)));
+  }
 }
 
 // ---------------------------------------------------------------- ground-level profile chart
@@ -1021,7 +1334,7 @@ function updateFieldExtent() {
   for (let x = 0; x <= 150; x += 2.5) {
     let v = 0;
     for (const h of [1, 10, 25])
-      v = Math.max(v, rmsAt(x, h, state.mode), rmsAt(-x, h, state.mode));
+      v = Math.max(v, rmsAt(x, h, state.mode, conductorsMid), rmsAt(-x, h, state.mode, conductorsMid));
     if (v > peak) peak = v;
     if (v >= peak * 0.05) edge = x;
   }
@@ -1076,6 +1389,19 @@ bindSlider('sagSlider', 'sagVal', () => state.sag, v => state.sag = v, v => v + 
 bindSlider('aSlider', 'aVal', () => state.visHz, v => state.visHz = v, v => v.toFixed(2) + ' cyc/s');
 bindSlider('zSlider', 'zVal', () => state.planeZ, v => state.planeZ = v, v => v === 0 ? 'midspan' : (v > 0 ? '+' : '') + v + ' m');
 
+// cross-section opacity: shader-only, no physics re-solve
+const paSlider = document.getElementById('paSlider'), paVal = document.getElementById('paVal');
+const fmtAlpha = v => Math.round(v * 100) + '%';
+paSlider.value = state.planeAlpha;
+paVal.textContent = fmtAlpha(state.planeAlpha);
+paintSlider(paSlider);
+paSlider.addEventListener('input', () => {
+  state.planeAlpha = parseFloat(paSlider.value);
+  fieldUniforms.uAlpha.value = state.planeAlpha;
+  paVal.textContent = fmtAlpha(state.planeAlpha);
+  paintSlider(paSlider);
+});
+
 const btnE = document.getElementById('btnE'), btnB = document.getElementById('btnB');
 function setMode(m) {
   state.mode = m;
@@ -1087,6 +1413,25 @@ function setMode(m) {
 }
 btnE.addEventListener('click', () => setMode('E'));
 btnB.addEventListener('click', () => setMode('B'));
+
+// independent layer toggles: Vectors gates all field arrows, Contours switches
+// the potential layer (plane rendering + 3D sheets)
+const btnVec = document.getElementById('btnVec'), btnPot = document.getElementById('btnPot');
+function applyVectorVisibility() {
+  arrows.visible = state.showVectors && state.showArrows && state.showPlane;
+  volArrows.visible = state.showVectors && state.showVolArrows;
+}
+btnVec.addEventListener('click', () => {
+  state.showVectors = !state.showVectors;
+  btnVec.classList.toggle('active', state.showVectors);
+  applyVectorVisibility();
+});
+btnPot.addEventListener('click', () => {
+  state.showContours = !state.showContours;
+  btnPot.classList.toggle('active', state.showContours);
+  syncSheetsVisible();
+  pushUniforms(); drawLegend();
+});
 
 // colormap floor text box: value in V/m (E) or µT (B), stored per mode
 const loInput = document.getElementById('loInput');
@@ -1113,13 +1458,33 @@ syncLoInput();
 
 document.getElementById('arrowsChk').addEventListener('change', e => {
   state.showArrows = e.target.checked;
-  arrows.visible = state.showArrows;
+  applyVectorVisibility();
 });
-document.getElementById('planeChk').addEventListener('change', e => {
-  fieldPlane.visible = e.target.checked;
-});
+const planeChk = document.getElementById('planeChk');
+// the cross-section position + opacity sliders only make sense with the plane on
+function syncPlaneCtls() {
+  document.querySelectorAll('.plane-ctl').forEach(el => el.style.display = state.showPlane ? '' : 'none');
+}
+function setPlane(on) {
+  state.showPlane = on;
+  planeChk.checked = on;
+  fieldPlane.visible = on;
+  applyVectorVisibility();          // the in-plane arrows belong to the 2D plane
+  syncPlaneCtls();
+}
+planeChk.addEventListener('change', e => setPlane(e.target.checked));
+syncPlaneCtls();
 document.getElementById('cloudChk').addEventListener('change', e => {
-  volArrows.visible = e.target.checked;
+  state.showVolArrows = e.target.checked;
+  applyVectorVisibility();
+});
+document.getElementById('sheetsChk').addEventListener('change', e => {
+  state.showSheets = e.target.checked;
+  syncSheetsVisible();
+});
+document.getElementById('zeroChk').addEventListener('change', e => {
+  state.showZero = e.target.checked;
+  fieldUniforms.uShowZero.value = state.showZero ? 1 : 0;   // 3D sheet updates next frame
 });
 // bottom chips: field profile chart and phasor clock
 // on small screens the expanded Configuration sheet and these boxes are mutually
@@ -1142,6 +1507,33 @@ function wireChip(chip, boxEl) {
 }
 wireChip(chipChartEl, chartBoxEl);
 wireChip(chipPhasorEl, phasorBox);
+
+// auto-rotate the camera around the scene (OrbitControls; controls.update() runs each frame)
+// enabled by default
+controls.autoRotateSpeed = 0.5;
+controls.autoRotate = true;
+const chipRotateEl = document.getElementById('chipRotate');
+chipRotateEl.classList.add('active');
+chipRotateEl.addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate;
+  chipRotateEl.classList.toggle('active', controls.autoRotate);
+});
+
+// keyboard shortcuts: v = vectors, c = contours, e = E field, b = B field,
+// p = cross-section plane (2D)
+addEventListener('keydown', e => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  switch (e.key.toLowerCase()) {
+    case 'v': btnVec.click(); break;
+    case 'c': btnPot.click(); break;
+    case 'e': setMode('E'); break;
+    case 'b': setMode('B'); break;
+    case 'p': setPlane(!state.showPlane); break;
+    default: return;
+  }
+});
 
 // probe height for the field profile (chart-only, no re-solve needed)
 const probeSlider = document.getElementById('probeSlider');
@@ -1190,8 +1582,9 @@ function animate() {
   const cosT = Math.cos(theta), sinT = Math.sin(theta);
   fieldUniforms.uCosT.value = cosT;
   fieldUniforms.uSinT.value = sinT;
-  if (state.showArrows) updateArrows(cosT, sinT);
+  if (arrows.visible) updateArrows(cosT, sinT);
   if (volArrows.visible) updateVolArrows(cosT, sinT);
+  if (sheets.visible) updateSheets(cosT, sinT);
   if (phasorBox.style.display !== 'none') drawPhasors(theta);
   controls.update();
   renderer.render(scene, camera);
@@ -1203,7 +1596,12 @@ window.__viz = { camera, controls, state, geom,
   debug: () => ({ fieldExtent, planeScaleX: +fieldPlane.scale.x.toFixed(3),
                   arrowXmax: Math.max(...arrowXs), volXmax: Math.max(...volCols.map(c => c[0])),
                   nPlaneArrows: N_ARROWS * 2, nVolArrows: N_VOL,
-                  avgFrameMs: +avgFrameMs.toFixed(2) }) };
+                  sheetsVisible: sheets.visible, sheetSegs: sheetGeo.drawRange.count / 6,
+                  bundleOffs: bundleOffsets().map(o => o.map(v => +v.toFixed(3))),
+                  potScale: fieldUniforms.uPotScale.value,
+                  avgFrameMs: +avgFrameMs.toFixed(2) }),
+  stepSheets: (c = 1, s = 0) => { const t0 = performance.now(); updateSheets(c, s);
+    return { segs: sheetGeo.drawRange.count / 6, ms: +(performance.now() - t0).toFixed(2) }; } };
 
 // ---------------------------------------------------------------- guided tour
 const TOUR_KEY = 'powerviz.tourDone';
