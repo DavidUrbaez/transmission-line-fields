@@ -143,7 +143,8 @@
   <div class="mode-row seg"><button id="btnE" class="mode-btn active">E field</button>
     <button id="btnB" class="mode-btn">B field</button></div>
   <div class="mode-row"><button id="btnVec" class="tog-btn active">Vectors</button>
-    <button id="btnPot" class="tog-btn">Contours</button></div>
+    <button id="btnPot" class="tog-btn">Contours</button>
+    <button id="btnPlane" class="tog-btn active">2D plane</button></div>
 </div>
 
 <div id="legend" class="overlay">
@@ -153,7 +154,7 @@
     <div id="legendLabels">
       <span id="legHi"></span>
       <span id="legMid"></span>
-      <span id="legLoWrap"><input type="number" id="loInput" value="800"><span id="loUnit">V/m</span><span id="legLoTxt" style="display:none"></span></span>
+      <span id="legLoWrap"><input type="number" id="loInput" value="2000"><span id="loUnit">V/m</span><span id="legLoTxt" style="display:none"></span></span>
     </div>
   </div>
 </div>
@@ -162,7 +163,7 @@
   <h2 id="panelHead">Configuration <span id="panelChevron">▾</span></h2>
   <div id="panelBody">
   <div class="ctl"><label>Voltage (L-L, rms) <b id="vVal"></b></label>
-    <input type="range" id="vSlider" min="69" max="765" step="1" value="345"></div>
+    <input type="range" id="vSlider" min="69" max="765" step="1" value="500"></div>
   <div class="ctl"><label>Current per phase (rms) <b id="iVal"></b></label>
     <input type="range" id="iSlider" min="0" max="3000" step="50" value="1000"></div>
   <div class="ctl"><label>Phase spacing <b id="sVal"></b></label>
@@ -258,7 +259,7 @@ const state = {
   mode: 'E',
   showVectors: true,              // vector layer: field arrows (2D + 3D)
   showContours: false,            // contour layer: potential plane + 3D sheets
-  vLL: 345e3,
+  vLL: 500e3,
   iRms: 1000,
   spacing: 9,
   height: 20,                     // conductor height at MIDSPAN (where the field plane is)
@@ -269,7 +270,7 @@ const state = {
   visHz: 0.25,
   planeZ: 0,                      // cross-section position along the middle span
   probeH: 1,                      // probe height for the field profile chart (m)
-  eLoExp: Math.log10(800),        // log-scale floor for E: 800 V/m default
+  eLoExp: Math.log10(2000),       // log-scale floor for E: 2000 V/m default
   bLoExp: Math.log10(5e-6),       // log-scale floor for B: 5 µT default
   showArrows: true,
   showVolArrows: true,
@@ -1461,6 +1462,7 @@ document.getElementById('arrowsChk').addEventListener('change', e => {
   applyVectorVisibility();
 });
 const planeChk = document.getElementById('planeChk');
+const btnPlane = document.getElementById('btnPlane');
 // the cross-section position + opacity sliders only make sense with the plane on
 function syncPlaneCtls() {
   document.querySelectorAll('.plane-ctl').forEach(el => el.style.display = state.showPlane ? '' : 'none');
@@ -1468,11 +1470,13 @@ function syncPlaneCtls() {
 function setPlane(on) {
   state.showPlane = on;
   planeChk.checked = on;
+  btnPlane.classList.toggle('active', on);   // keep the modeBox pill in sync
   fieldPlane.visible = on;
   applyVectorVisibility();          // the in-plane arrows belong to the 2D plane
   syncPlaneCtls();
 }
 planeChk.addEventListener('change', e => setPlane(e.target.checked));
+btnPlane.addEventListener('click', () => setPlane(!state.showPlane));
 syncPlaneCtls();
 document.getElementById('cloudChk').addEventListener('change', e => {
   state.showVolArrows = e.target.checked;
