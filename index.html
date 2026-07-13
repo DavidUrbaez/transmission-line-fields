@@ -46,11 +46,13 @@
     background: #eaf2fc; border: 3px solid #4a8fdd; }
   input[type=range]::-moz-range-progress { background: #4a8fdd; height: 6px; border-radius: 3px; }
   .check-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #aeb9c9; margin: 8px 0 0; }
+  .cine-row { display: none; }   /* shown only on mobile (chip is used on desktop) */
   #readout { margin-top: 10px; padding-top: 9px; border-top: 1px solid #222c3b; font-size: 11.5px; color: #93a0b4; line-height: 1.7; }
   #readout b { color: #ffd479; font-weight: 600; }
 
   #modeBox { top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 5px;
-             background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 6px; }
+             background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 6px;
+             z-index: 12; }   /* stay above the legend so its buttons are never covered */
   #modeBox .mode-row { display: flex; gap: 6px; margin: 0; }
   #modeBox .mode-btn { width: 96px; }
   /* E/B: joined segmented pair (pick one) */
@@ -114,13 +116,23 @@
     #legend { top: 8px; padding: 7px 9px; }
     #legendCanvas { width: 12px; height: 92px; }
     /* Configuration sheet floats ABOVE the chips row so the buttons stay reachable */
+    /* the header is a fixed top bar OUTSIDE the scroll area; only the body scrolls
+       beneath it. This makes it impossible for any control — including native
+       range/checkbox thumbs that ignore z-index — to paint over the title. */
     #panel { top: auto; left: 8px; right: 8px; bottom: 52px; width: auto;
-             max-height: 48vh; overflow-y: auto; border-radius: 12px;
-             padding: 10px 14px; }
+             max-height: 48vh; display: flex; flex-direction: column;
+             overflow: hidden; border-radius: 12px; padding: 0; background: #0d111a; }
+    #panelHead { flex: 0 0 auto; margin: 0; padding: 12px 14px 10px;
+                 background: #0d111a; border-bottom: 1px solid #26303f; }
+    #panelBody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; }
+    #panel.collapsed { padding-bottom: 0; }
+    #panel.collapsed #panelHead { border-bottom: none; }
     input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
     #modeBox { top: 8px; left: auto; right: 8px; transform: none; padding: 4px; }
     #modeBox .mode-btn, #modeBox .tog-btn { width: 72px; padding: 6px 0; }
     #chips { left: 8px; right: 8px; bottom: 8px; }
+    #chipCine { display: none; }   /* moved into the Configuration menu on mobile */
+    .cine-row { display: flex; }
     #chartBox { left: 8px; bottom: 100px; padding: 6px 8px 4px; }
     #chartCanvas { width: min(300px, calc(100vw - 118px)); height: auto; aspect-ratio: 680 / 260; }
     #phasorBox { right: 8px; bottom: 100px; }
@@ -191,6 +203,7 @@
   <div class="check-row"><input type="checkbox" id="zeroChk"><label for="zeroChk">Zero-potential plane (contours view)</label></div>
   <div class="check-row"><input type="checkbox" id="arrowsChk" checked><label for="arrowsChk">Field direction arrows</label></div>
   <div class="check-row"><input type="checkbox" id="shieldChk" checked><label for="shieldChk">Shield wires (grounded, in E-field solve)</label></div>
+  <div class="check-row cine-row"><input type="checkbox" id="cineChk"><label for="cineChk">🎬 Cinematic fly-through</label></div>
   <div id="readout"></div>
   </div>
 </div>
@@ -211,6 +224,7 @@
   <button id="chipChart" class="chip active">Field profile</button>
   <button id="chipPhasor" class="chip">Phase voltages</button>
   <button id="chipRotate" class="chip" title="Auto-rotate the camera">↻ Rotate</button>
+  <button id="chipCine" class="chip" title="Cinematic camera fly-through (for screen recording)">🎬 Cinematic</button>
   <button id="chipTour" class="chip" title="Guided tour">?</button>
 </div>
 
@@ -279,6 +293,7 @@ const state = {
   planeAlpha: 0.94,               // cross-section plane opacity
   showZero: false,                // zero-potential plane/contour in the contours view
   shieldWires: true,
+  cinematic: false,               // scripted camera fly-through for screen recording
 };
 const activeLo = () => 10 ** (state.mode === 'E' ? state.eLoExp : state.bLoExp);
 
@@ -1523,6 +1538,50 @@ chipRotateEl.addEventListener('click', () => {
   chipRotateEl.classList.toggle('active', controls.autoRotate);
 });
 
+// ---------------------------------------------------------------- cinematic fly-through
+// A smooth, continuously looping camera path for screen recording. Position and
+// look-at keyframes are interpolated as closed Catmull-Rom splines so the motion
+// glides through establishing shots, a low pass down the corridor, and high arcs
+// around the tower with no hard cuts.
+const CINE_DUR = 42;              // seconds for one full loop (slow = cinematic)
+const V3 = a => new THREE.Vector3(a[0], a[1], a[2]);
+const cinePos = new THREE.CatmullRomCurve3([
+  [200, 82, 246], [122, 34, 60], [16, 20, 214], [-72, 42, 150],
+  [-192, 92, 118], [-92, 30, -124], [122, 60, -162],
+].map(V3), true, 'catmullrom', 0.5);
+const cineTgt = new THREE.CatmullRomCurve3([
+  [0, 24, 0], [0, 24, -30], [0, 22, -260], [0, 26, -40],
+  [0, 30, -20], [0, 24, 40], [0, 26, 20],
+].map(V3), true, 'catmullrom', 0.5);
+let cineT = 0;
+const _cineTgt = new THREE.Vector3();
+function updateCinematic(dt) {
+  cineT = (cineT + dt / CINE_DUR) % 1;
+  cinePos.getPoint(cineT, camera.position);
+  cineTgt.getPoint(cineT, _cineTgt);
+  camera.lookAt(_cineTgt);
+}
+const chipCineEl = document.getElementById('chipCine');
+const cineChk = document.getElementById('cineChk');
+// one entry point for both controls: the desktop chip and the mobile menu checkbox
+function setCinematic(on) {
+  state.cinematic = on;
+  chipCineEl.classList.toggle('active', on);
+  cineChk.checked = on;
+  if (on) {
+    controls.enabled = false;               // hand the camera to the scripted path
+    controls.autoRotate = false;
+    chipRotateEl.classList.remove('active');
+    cineT = 0;
+  } else {
+    controls.enabled = true;                // hand it back where the fly-through left off
+    cineTgt.getPoint(cineT, controls.target);
+    controls.update();
+  }
+}
+chipCineEl.addEventListener('click', () => setCinematic(!state.cinematic));
+cineChk.addEventListener('change', e => setCinematic(e.target.checked));
+
 // keyboard shortcuts: v = vectors, c = contours, e = E field, b = B field,
 // p = cross-section plane (2D)
 addEventListener('keydown', e => {
@@ -1590,7 +1649,8 @@ function animate() {
   if (volArrows.visible) updateVolArrows(cosT, sinT);
   if (sheets.visible) updateSheets(cosT, sinT);
   if (phasorBox.style.display !== 'none') drawPhasors(theta);
-  controls.update();
+  if (state.cinematic) updateCinematic(dt);
+  else controls.update();
   renderer.render(scene, camera);
 }
 
