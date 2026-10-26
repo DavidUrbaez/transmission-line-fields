@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fields Around a Transmission Line — 3D Explorer</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e14; font-family: "Segoe UI", system-ui, sans-serif; color: #dde3ea; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  .overlay { position: absolute; z-index: 10; }
+  #legend { top: 14px; left: 16px; background: rgba(13,17,26,0.82); border: 1px solid #26303f; border-radius: 8px; padding: 10px 12px; }
+  #legend .bar-row { display: flex; align-items: stretch; gap: 8px; }
+  #legendCanvas { width: 16px; height: 140px; border-radius: 3px; }
+  #legendLabels { display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: #aeb9c9; }
+  #legendTitle { font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #dde3ea; }
+  #legLoWrap { display: flex; align-items: center; gap: 3px; }
+  #loInput { width: 52px; min-width: 0; background: #141a26; border: 1px solid #2c3850;
+    color: #e8eef6; border-radius: 5px; font-size: 10.5px; padding: 2px 4px; font-family: inherit;
+    -moz-appearance: textfield; appearance: textfield; }
+  #loInput:focus { outline: none; border-color: #3d6cb0; }
+  #loInput::-webkit-outer-spin-button,
+  #loInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #loUnit { color: #8fa0b8; font-size: 10px; }
+
+  #panel { top: 14px; right: 14px; width: 268px; background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 14px 16px 12px; backdrop-filter: blur(6px); }
+  #panel h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8fa0b8; }
+  .mode-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .mode-btn { flex: 1; padding: 7px 0; font-size: 12.5px; font-weight: 600; border-radius: 6px; border: 1px solid #2c3850; background: #141a26; color: #93a0b4; cursor: pointer; }
+  #btnE.active { background: #10304a; border-color: #2a7ab0; color: #a8dcff; }
+  #btnB.active { background: #3a1430; border-color: #e16462; color: #ffd9c9; }
+  .ctl { margin-bottom: 9px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 11.5px; color: #aeb9c9; margin-bottom: 3px; }
+  .ctl label b { color: #e8eef6; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] { width: 100%; }
+
+  /* custom range styling: thin filled track + round thumb */
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
+                      background: #232d3d; outline: none; cursor: pointer; margin: 6px 0; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%; background: #eaf2fc;
+    border: 3px solid #4a8fdd; box-shadow: 0 1px 5px rgba(0,0,0,0.55); }
+  input[type=range]:hover::-webkit-slider-thumb { background: #ffffff; }
+  input[type=range]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%;
+    background: #eaf2fc; border: 3px solid #4a8fdd; }
+  input[type=range]::-moz-range-progress { background: #4a8fdd; height: 6px; border-radius: 3px; }
+  .check-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #aeb9c9; margin: 8px 0 0; }
+  .cine-row { display: none; }   /* shown only on mobile (chip is used on desktop) */
+  #readout { margin-top: 10px; padding-top: 9px; border-top: 1px solid #222c3b; font-size: 11.5px; color: #93a0b4; line-height: 1.7; }
+  #readout b { color: #ffd479; font-weight: 600; }
+
+  #modeBox { top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 5px;
+             background: rgba(13,17,26,0.88); border: 1px solid #26303f; border-radius: 10px; padding: 6px;
+             z-index: 12; }   /* stay above the legend so its buttons are never covered */
+  #modeBox .mode-row { display: flex; gap: 6px; margin: 0; }
+  #modeBox .mode-btn { width: 96px; }
+  /* arrow field: three-way segmented row; the middle button gets square corners */
+  .arrow-row .mode-btn { padding: 6px 0; font-size: 11.5px; }
+  .arrow-row .mode-btn:nth-child(2) { border-radius: 0; border-left: none; }
+  #arrE.active { background: #10304a; border-color: #2a7ab0; color: #a8dcff; }
+  #arrB.active { background: #3a1430; border-color: #e16462; color: #ffd9c9; }
+  #arrS.active { background: #12341f; border-color: #4caf6a; color: #c9f5d2; }
+  #arrowLegend { display: none; margin-top: 9px; padding-top: 7px; border-top: 1px solid #222c3b; }
+  .arrow-leg + .arrow-leg { margin-top: 7px; }
+  .arrow-leg-title { font-size: 10.5px; font-weight: 600; color: #dde3ea; margin-bottom: 4px; }
+  .arrow-leg canvas { display: block; width: 110px; height: 8px; border-radius: 2px; }
+  .arrow-leg-labels { display: flex; justify-content: space-between; font-size: 9.5px; color: #aeb9c9; margin-top: 2px; gap: 6px; }
+  .orient-row { margin: 0; }
+  .orient-row .mode-btn { padding: 6px 0; font-size: 12px; }
+  .orient-row .mode-btn.active { background: #1d3a63; border-color: #3d6cb0; color: #eaf1fa; }
+  /* E/B: joined segmented pair (pick one) */
+  .mode-row.seg { gap: 0; }
+  .mode-row.seg .mode-btn:first-child { border-radius: 6px 0 0 6px; }
+  .mode-row.seg .mode-btn:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  /* Vectors/Contours: independent pill toggles with a status dot */
+  .tog-btn { width: 96px; padding: 6px 0; font-size: 12px; font-weight: 600; border-radius: 999px;
+             border: 1px solid #2c3850; background: #10151f; color: #7f8ca0; cursor: pointer;
+             display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .tog-btn::before { content: ''; width: 7px; height: 7px; border-radius: 50%;
+                     background: #4a5568; transition: background 0.15s; }
+  .tog-btn.active { color: #dfe8f4; border-color: #3a4a66; background: #17202e; }
+  .tog-btn.active::before { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.55); }
+
+  #chips { left: 16px; bottom: 14px; display: flex; gap: 8px; }
+  .chip { padding: 7px 12px; font-size: 12px; font-weight: 600; border-radius: 8px;
+          border: 1px solid #2c3850; background: rgba(13,17,26,0.88); color: #93a0b4; cursor: pointer; }
+  .chip.active { background: #1d3a63; border-color: #3d6cb0; color: #eaf1fa; }
+
+  #chartBox { left: 16px; bottom: 54px; background: rgba(13,17,26,0.85); border: 1px solid #26303f; border-radius: 8px; padding: 8px 10px 6px; }
+  #chartTitle { font-size: 11px; color: #aeb9c9; margin-bottom: 4px; }
+  #chartCanvas { width: 340px; height: 130px; }
+  #chartRow { display: flex; align-items: center; gap: 10px; }
+  #probeCol { display: flex; flex-direction: column; align-items: center; gap: 7px;
+              font-size: 10px; color: #8fa0b8; }
+  #probeCol b { color: #e8eef6; font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #probeSlider { writing-mode: vertical-lr; direction: rtl; width: 6px; height: 96px; margin: 0; }
+
+  #phasorBox { right: 14px; bottom: 34px; background: rgba(13,17,26,0.85); border: 1px solid #26303f; border-radius: 8px; padding: 8px 10px 5px; }
+  #phasorTitle { font-size: 11px; color: #aeb9c9; margin-bottom: 3px; text-align: center; }
+  #phasorCanvas { width: 150px; height: 150px; }
+
+  #hint { bottom: 14px; right: 190px; font-size: 11px; color: #5d6a7d; pointer-events: none; }
+
+  /* ---- guided tour ---- */
+  #tourDim { position: fixed; inset: 0; background: rgba(4,7,12,0.62); z-index: 55; display: none; pointer-events: none; }
+  #tourRing { position: fixed; z-index: 55; border: 2px solid #6db3f2; border-radius: 12px;
+              box-shadow: 0 0 0 9999px rgba(4,7,12,0.62); pointer-events: none; display: none;
+              transition: left 0.25s, top 0.25s, width 0.25s, height 0.25s; }
+  #tourCard { position: fixed; z-index: 60; display: none; background: #101623; border: 1px solid #33415a;
+              border-radius: 12px; padding: 14px 16px 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.55);
+              box-sizing: border-box; }
+  #tourCard h3 { margin: 0 0 6px; font-size: 14px; color: #eaf1fa; }
+  #tourCard p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: #aeb9c9; }
+  #tourNav { display: flex; align-items: center; gap: 8px; }
+  #tourStepNum { font-size: 11px; color: #6d7a8c; margin-right: auto; }
+  .tour-btn { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  #tourNext { background: #2c65b5; border: 1px solid #4a8fdd; color: #fff; }
+  #tourBack, #tourSkip { background: #141a26; border: 1px solid #2c3850; color: #93a0b4; }
+  #tourBack:disabled { opacity: 0.4; cursor: default; }
+
+  #panelHead { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+  #panelChevron { display: inline-block; transition: transform 0.2s; font-size: 11px; }
+  #panel.collapsed #panelBody { display: none; }
+  #panel.collapsed { padding-bottom: 10px; }
+  #panel.collapsed #panelChevron { transform: rotate(-90deg); }
+
+  /* ---- small screens: bottom-sheet panel, scaled overlays ---- */
+  @media (max-width: 700px), (max-height: 540px) {
+    #legend { top: 8px; padding: 7px 9px; }
+    #legendCanvas { width: 12px; height: 92px; }
+    /* Configuration sheet floats ABOVE the chips row so the buttons stay reachable */
+    /* the header is a fixed top bar OUTSIDE the scroll area; only the body scrolls
+       beneath it. This makes it impossible for any control — including native
+       range/checkbox thumbs that ignore z-index — to paint over the title. */
+    #panel { top: auto; left: 8px; right: 8px; bottom: 52px; width: auto;
+             max-height: 48vh; display: flex; flex-direction: column;
+             overflow: hidden; border-radius: 12px; padding: 0; background: #0d111a; }
+    #panelHead { flex: 0 0 auto; margin: 0; padding: 12px 14px 10px;
+                 background: #0d111a; border-bottom: 1px solid #26303f; }
+    #panelBody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; }
+    #panel.collapsed { padding-bottom: 0; }
+    #panel.collapsed #panelHead { border-bottom: none; }
+    input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+    #modeBox { top: 8px; left: auto; right: 8px; transform: none; padding: 4px; }
+    #modeBox .mode-btn, #modeBox .tog-btn { width: 72px; padding: 6px 0; }
+    #chips { left: 8px; right: 8px; bottom: 8px; }
+    #chipCine { display: none; }   /* moved into the Configuration menu on mobile */
+    .cine-row { display: flex; }
+    #chartBox { left: 8px; bottom: 100px; padding: 6px 8px 4px; }
+    #chartCanvas { width: min(300px, calc(100vw - 118px)); height: auto; aspect-ratio: 680 / 260; }
+    #phasorBox { right: 8px; bottom: 100px; }
+    #hint { display: none; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="modeBox" class="overlay">
+  <div class="mode-row seg"><button id="btnE" class="mode-btn active" title="Color map: electric field (e key)">E field</button>
+    <button id="btnB" class="mode-btn" title="Color map: magnetic field (b key)">B field</button></div>
+  <div class="mode-row seg arrow-row"><button id="arrE" class="mode-btn active" title="Toggle E arrows (1 key)">E arrows</button>
+    <button id="arrB" class="mode-btn" title="Toggle B arrows (2 key)">B arrows</button>
+    <button id="arrS" class="mode-btn" title="Toggle Poynting arrows S = E × H: power flow along the line (3 key)">S = E×H</button></div>
+  <div class="mode-row"><button id="btnVec" class="tog-btn active">Vectors</button>
+    <button id="btnPot" class="tog-btn">Contours</button>
+    <button id="btnPlane" class="tog-btn active">2D plane</button></div>
+</div>
+
+<div id="legend" class="overlay">
+  <div id="legendTitle">|E| field</div>
+  <div class="bar-row">
+    <canvas id="legendCanvas" width="16" height="140"></canvas>
+    <div id="legendLabels">
+      <span id="legHi"></span>
+      <span id="legMid"></span>
+      <span id="legLoWrap"><input type="number" id="loInput" value="2000"><span id="loUnit">V/m</span><span id="legLoTxt" style="display:none"></span></span>
+    </div>
+  </div>
+  <div id="arrowLegend"></div>
+</div>
+
+<div id="panel" class="overlay">
+  <h2 id="panelHead">Configuration <span id="panelChevron">▾</span></h2>
+  <div id="panelBody">
+  <div class="ctl"><label>Voltage (L-L, rms) <b id="vVal"></b></label>
+    <input type="range" id="vSlider" min="69" max="765" step="1" value="500"></div>
+  <div class="ctl"><label>Current per phase (rms) <b id="iVal"></b></label>
+    <input type="range" id="iSlider" min="0" max="3000" step="50" value="1000"></div>
+  <div class="ctl"><label>Phase spacing <b id="sVal"></b></label>
+    <input type="range" id="sSlider" min="4" max="15" step="0.5" value="9"></div>
+  <div class="ctl"><label>Conductor height (midspan) <b id="hVal"></b></label>
+    <input type="range" id="hSlider" min="8" max="35" step="0.5" value="20"></div>
+  <div class="ctl"><label>Sag (midspan) <b id="sagVal"></b></label>
+    <input type="range" id="sagSlider" min="3" max="25" step="0.5" value="7"></div>
+  <div class="ctl"><label>Subconductors per bundle <b id="nVal"></b></label>
+    <input type="range" id="nSlider" min="1" max="4" step="1" value="2"></div>
+  <div class="ctl"><label>Bundle spacing <b id="bVal"></b></label>
+    <input type="range" id="bSlider" min="20" max="60" step="1" value="45"></div>
+  <div class="ctl"><label>Subconductor diameter <b id="dVal"></b></label>
+    <input type="range" id="dSlider" min="10" max="50" step="0.1" value="25.1"></div>
+  <div class="ctl"><label>Animation speed <b id="aVal"></b></label>
+    <input type="range" id="aSlider" min="0" max="1" step="0.05" value="0.25"></div>
+  <div class="ctl plane-ctl"><label>Field plane</label>
+    <div class="mode-row seg orient-row"><button id="btnXY" class="mode-btn active" title="Vertical cross-section across the line (x key)">XY · cross</button>
+      <button id="btnXZ" class="mode-btn" title="Horizontal map along the span at the probe height (x key)">XZ · ground</button></div></div>
+  <div class="ctl plane-ctl xy-ctl"><label>Cross-section position <b id="zVal"></b></label>
+    <input type="range" id="zSlider" min="-130" max="130" step="1" value="0"></div>
+  <div class="ctl plane-ctl xz-ctl"><label>Plane height (probe) <b id="phVal"></b></label>
+    <input type="range" id="phSlider" min="0" max="10" step="0.25" value="1"></div>
+  <div class="ctl plane-ctl"><label>Plane opacity <b id="paVal"></b></label>
+    <input type="range" id="paSlider" min="0.1" max="1" step="0.01" value="0.94"></div>
+  <h2 style="margin-top:12px">View</h2>
+  <div class="check-row"><input type="checkbox" id="planeChk" checked><label for="planeChk">2D field plane</label></div>
+  <div class="check-row"><input type="checkbox" id="cloudChk" checked><label for="cloudChk">3D field arrows (volume)</label></div>
+  <div class="check-row"><input type="checkbox" id="sheetsChk" checked><label for="sheetsChk">3D contour sheets (contours view)</label></div>
+  <div class="check-row"><input type="checkbox" id="zeroChk"><label for="zeroChk">Zero-potential plane (contours view)</label></div>
+  <div class="check-row"><input type="checkbox" id="arrowsChk" checked><label for="arrowsChk">Field direction arrows</label></div>
+  <div class="check-row"><input type="checkbox" id="shieldChk" checked><label for="shieldChk">Shield wires (grounded, in E-field solve)</label></div>
+  <div class="check-row cine-row"><input type="checkbox" id="cineChk"><label for="cineChk">🎬 Cinematic fly-through</label></div>
+  <div id="readout"></div>
+  </div>
+</div>
+
+<div id="chartBox" class="overlay">
+  <div id="chartTitle"></div>
+  <div id="chartRow">
+    <canvas id="chartCanvas" width="680" height="260"></canvas>
+    <div id="probeCol">
+      <b id="probeVal">1.00 m</b>
+      <input type="range" id="probeSlider" orient="vertical" min="0" max="10" step="0.25" value="1">
+      <span>height</span>
+    </div>
+  </div>
+</div>
+
+<div id="chips" class="overlay">
+  <button id="chipChart" class="chip active">Field profile</button>
+  <button id="chipPhasor" class="chip">Phase voltages</button>
+  <button id="chipRotate" class="chip" title="Auto-rotate the camera">↻ Rotate</button>
+  <button id="chipCine" class="chip" title="Cinematic camera fly-through (for screen recording)">🎬 Cinematic</button>
+  <button id="chipTour" class="chip" title="Guided tour">?</button>
+</div>
+
+<div id="tourDim"></div>
+<div id="tourRing"></div>
+<div id="tourCard">
+  <h3 id="tourTitle"></h3>
+  <p id="tourText"></p>
+  <div id="tourNav">
+    <span id="tourStepNum"></span>
+    <button id="tourSkip" class="tour-btn">Skip</button>
+    <button id="tourBack" class="tour-btn">Back</button>
+    <button id="tourNext" class="tour-btn">Next</button>
+  </div>
+</div>
+
+<div id="phasorBox" class="overlay" style="display:none">
+  <div id="phasorTitle">Phase voltages</div>
+  <canvas id="phasorCanvas" width="300" height="300"></canvas>
+</div>
+
+<div id="hint" class="overlay">drag to orbit · scroll to zoom · right-drag to pan</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ---------------------------------------------------------------- constants
+const EPS0 = 8.854187817e-12;
+const MU0  = 4 * Math.PI * 1e-7;
+const SHIELD_RADIUS = 0.006;      // shield wire radius (m)
+const MAXC = 14;                  // shader-side max conductors (3 phases x 4 + 2 shields)
+
+const SPAN = 260;                 // tower-to-tower span (m); field plane sits at midspan z=0
+const INS_LEN = 3.4;              // insulator string vertical extent (m)
+const PHASE_ANGLES = [0, -2 * Math.PI / 3, 2 * Math.PI / 3];
+const PHASE_COLORS = ['#ffb04d', '#63d8cf', '#b58cff'];
+
+// Colormap ranges (log scale); the low end is user-adjustable, these are defaults
+const E_LO = 50,    E_HI = 2e6;   // V/m
+const B_LO = 2e-7,  B_HI = 1e-3;  // T
+
+// ---------------------------------------------------------------- state
+const state = {
+  mode: 'E',                      // heatmap field
+  arrowFields: { E: true, B: false, S: false },   // arrow layers, any combination (S = Poynting, E x H)
+  showVectors: true,              // vector layer: field arrows (2D + 3D)
+  showContours: false,            // contour layer: potential plane + 3D sheets
+  vLL: 500e3,
+  iRms: 1000,
+  spacing: 9,
+  height: 20,                     // conductor height at MIDSPAN (where the field plane is)
+  nSub: 2,
+  bundleSpacing: 0.45,
+  condDiam: 25.1,                 // subconductor diameter (mm), used in the P matrix
+  sag: 7,                         // conductor sag at midspan (m)
+  visHz: 0.25,
+  planeZ: 0,                      // cross-section position along the middle span
+  probeH: 1,                      // probe height for the field profile chart (m)
+  eLoExp: Math.log10(2000),       // log-scale floor for E: 2000 V/m default
+  bLoExp: Math.log10(5e-6),       // log-scale floor for B: 5 µT default
+  showArrows: true,
+  showVolArrows: true,
+  showSheets: true,               // extruded iso-potential sheets in contours view
+  showPlane: true,                // cross-section colored plane + its in-plane arrows
+  planeAlpha: 0.94,               // field plane opacity
+  planeOrient: 'XY',              // 'XY' vertical cross-section, 'XZ' horizontal plane at probeH
+  showZero: false,                // zero-potential plane/contour in the contours view
+  shieldWires: true,
+  cinematic: false,               // scripted camera fly-through for screen recording
+};
+const activeLo = () => 10 ** (state.mode === 'E' ? state.eLoExp : state.bLoExp);
+
+// derived geometry, shared by physics and visuals
+function geom() {
+  const hAtt = state.height + state.sag;        // conductor attach height at tower
+  const armY = hAtt + INS_LEN;                  // crossarm bottom chord
+  const armTop = armY + 1.7;
+  const throatY = hAtt - 3.0;                   // column top: below the center conductor
+  // cup arms meet the crossarm at ~62% of phase spacing (real 500 kV wine-glass
+  // proportions: ~3.5 m live clearance from center phase to tower steel)
+  const xCup = Math.min(7.5, Math.max(3.2, state.spacing * 0.62));
+  const shieldX = state.spacing * 0.72;
+  const shieldSag = state.sag * 0.75;           // shield wires are strung tighter
+  const shieldPeakY = armTop + 3.9;             // shield attach at tower
+  const shieldMidY = shieldPeakY - shieldSag;   // shield height at midspan (physics)
+  return { hAtt, armY, armTop, throatY, xCup, shieldX, shieldSag, shieldPeakY, shieldMidY };
+}
+
+let conductors = [];   // [{x, y, radius, shield, vRe, vIm, iRe, iIm, qRe, qIm}] at midspan
+
+// ---------------------------------------------------------------- physics
+function solveLinearSystem(A, b) {
+  const n = b.length;
+  for (let col = 0; col < n; col++) {
+    let piv = col;
+    for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+    if (piv !== col) { [A[col], A[piv]] = [A[piv], A[col]]; [b[col], b[piv]] = [b[piv], b[col]]; }
+    const d = A[col][col];
+    for (let r = col + 1; r < n; r++) {
+      const f = A[r][col] / d;
+      if (f === 0) continue;
+      for (let c = col; c < n; c++) A[r][c] -= f * A[col][c];
+      b[r] -= f * b[col];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let r = n - 1; r >= 0; r--) {
+    let s = b[r];
+    for (let c = r + 1; c < n; c++) s -= A[r][c] * x[c];
+    x[r] = s / A[r][r];
+  }
+  return x;
+}
+
+function bundleOffsets() {
+  const n = state.nSub;
+  const Rb = n === 1 ? 0 : state.bundleSpacing / (2 * Math.sin(Math.PI / n));
+  // real-world orientations: twin = horizontal side-by-side, triple = apex up,
+  // quad = flat square (two up, two down)
+  const start = n === 2 ? 0 : n === 4 ? Math.PI / 4 : Math.PI / 2;
+  const offs = [];
+  for (let k = 0; k < n; k++) {
+    const a = 2 * Math.PI * k / n + start;
+    offs.push([Rb * Math.cos(a), Rb * Math.sin(a)]);
+  }
+  return offs;
+}
+
+function solveSliceConductors(z) {
+  const g = geom();
+  const Vpk = state.vLL * Math.sqrt(2) / Math.sqrt(3);
+  const Ipk = state.iRms * Math.sqrt(2) / state.nSub;
+  const offs = bundleOffsets();
+
+  // conductor heights at this position along the span (sag)
+  const HS = SPAN / 2;
+  const sagT = 1 - (z / HS) ** 2;               // 1 at midspan, 0 at the towers
+  const condY = g.hAtt - state.sag * sagT;
+  const shieldY = g.shieldPeakY - g.shieldSag * sagT;
+  const condRadius = state.condDiam / 2000;     // mm diameter -> m radius
+
+  const conds = [];
+  for (let ph = 0; ph < 3; ph++) {
+    const cx = (ph - 1) * state.spacing;
+    for (const [ox, oy] of offs) {
+      conds.push({
+        x: cx + ox, y: condY + oy, radius: condRadius, shield: false,
+        vRe: Vpk * Math.cos(PHASE_ANGLES[ph]), vIm: Vpk * Math.sin(PHASE_ANGLES[ph]),
+        iRe: Ipk * Math.cos(PHASE_ANGLES[ph]), iIm: Ipk * Math.sin(PHASE_ANGLES[ph]),
+        qRe: 0, qIm: 0,
+      });
+    }
+  }
+  if (state.shieldWires) {
+    for (const sx of [-g.shieldX, g.shieldX]) {
+      conds.push({
+        x: sx, y: shieldY, radius: SHIELD_RADIUS, shield: true,
+        vRe: 0, vIm: 0, iRe: 0, iIm: 0, qRe: 0, qIm: 0,   // grounded; induced charge from the solve
+      });
+    }
+  }
+
+  // Maxwell potential coefficients with ground images: P_ij = ln(D'ij / Dij) / (2 pi eps0)
+  const N = conds.length;
+  const P = [];
+  for (let i = 0; i < N; i++) {
+    P.push(new Array(N));
+    for (let j = 0; j < N; j++) {
+      const ci = conds[i], cj = conds[j];
+      const dImg = Math.hypot(ci.x - cj.x, ci.y + cj.y);
+      const d = i === j ? ci.radius : Math.hypot(ci.x - cj.x, ci.y - cj.y);
+      P[i][j] = Math.log(dImg / d) / (2 * Math.PI * EPS0);
+    }
+  }
+  const qRe = solveLinearSystem(P.map(r => r.slice()), conds.map(c => c.vRe));
+  const qIm = solveLinearSystem(P.map(r => r.slice()), conds.map(c => c.vIm));
+  conds.forEach((c, i) => { c.qRe = qRe[i]; c.qIm = qIm[i]; });
+  return conds;
+}
+
+// two solves: `conductors` follows the cross-section slider (plane, plane
+// arrows, chart); `conductorsMid` is the fixed midspan reference used by
+// everything that spans the whole corridor (volume arrows, sheets, extent)
+let conductorsMid = [];
+function solveLine() {
+  conductors = solveSliceConductors(state.planeZ);
+  conductorsMid = state.planeZ === 0 ? conductors : solveSliceConductors(0);
+  sliceSets = [];
+  for (let k = 0; k < NZ_SLICES; k++)
+    sliceSets.push(solveSliceConductors(SPAN / 2 * (2 * k / (NZ_SLICES - 1) - 1)));
+}
+
+function fieldAt(x, y, cosT, sinT, mode, set = conductors) {
+  let fx = 0, fy = 0;
+  for (const c of set) {
+    if (mode === 'E') {
+      const q = c.qRe * cosT - c.qIm * sinT;
+      let dx = x - c.x, dy = y - c.y, r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      let k = q / (2 * Math.PI * EPS0 * r2);
+      fx += k * dx; fy += k * dy;
+      dx = x - c.x; dy = y + c.y; r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      k = -q / (2 * Math.PI * EPS0 * r2);
+      fx += k * dx; fy += k * dy;
+    } else {
+      const I = c.iRe * cosT - c.iIm * sinT;
+      if (I === 0) continue;
+      const dx = x - c.x, dy = y - c.y;
+      const r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      const k = MU0 * I / (2 * Math.PI * r2);
+      fx += -k * dy; fy += k * dx;
+    }
+  }
+  return [fx, fy];
+}
+
+function rmsAt(x, y, mode, set = conductors) {
+  let fxRe = 0, fxIm = 0, fyRe = 0, fyIm = 0;
+  for (const c of set) {
+    if (mode === 'E') {
+      let dx = x - c.x, dy = y - c.y, r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      let k = 1 / (2 * Math.PI * EPS0 * r2);
+      fxRe += k * dx * c.qRe; fxIm += k * dx * c.qIm;
+      fyRe += k * dy * c.qRe; fyIm += k * dy * c.qIm;
+      dx = x - c.x; dy = y + c.y; r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      k = -1 / (2 * Math.PI * EPS0 * r2);
+      fxRe += k * dx * c.qRe; fxIm += k * dx * c.qIm;
+      fyRe += k * dy * c.qRe; fyIm += k * dy * c.qIm;
+    } else {
+      const dx = x - c.x, dy = y - c.y;
+      const r2 = Math.max(dx * dx + dy * dy, 1e-6);
+      const k = MU0 / (2 * Math.PI * r2);
+      fxRe += -k * dy * c.iRe; fxIm += -k * dy * c.iIm;
+      fyRe +=  k * dx * c.iRe; fyIm +=  k * dx * c.iIm;
+    }
+  }
+  return Math.sqrt((fxRe * fxRe + fxIm * fxIm + fyRe * fyRe + fyIm * fyIm) / 2);
+}
+
+// potential phasor at a point: V (E mode, ground images) or A_z (B mode).
+// Time-independent, so grids of these are precomputed per configuration.
+function potPhasorAt(x, y, set = conductors) {
+  let re = 0, im = 0;
+  for (const c of set) {
+    const d1 = Math.max(Math.hypot(x - c.x, y - c.y), 1e-3);
+    if (state.mode === 'E') {
+      const d2 = Math.max(Math.hypot(x - c.x, y + c.y), 1e-3);
+      const k = Math.log(d2 / d1) / (2 * Math.PI * EPS0);
+      re += k * c.qRe; im += k * c.qIm;
+    } else {
+      const k = -MU0 / (2 * Math.PI) * Math.log(d1);
+      re += k * c.iRe; im += k * c.iIm;
+    }
+  }
+  return [re, im];
+}
+function potAmpAt(x, y) {
+  const [re, im] = potPhasorAt(x, y);
+  return Math.hypot(re, im);
+}
+
+// ---------------------------------------------------------------- colormaps (E = ice, B = plasma)
+const CMAP_E = [
+  [0.01, 0.03, 0.08], [0.04, 0.12, 0.35], [0.05, 0.32, 0.65],
+  [0.10, 0.58, 0.85], [0.35, 0.85, 0.95], [0.90, 0.99, 1.00],
+];
+const CMAP_B = [
+  [0.050, 0.030, 0.528], [0.417, 0.001, 0.658], [0.694, 0.165, 0.564],
+  [0.882, 0.392, 0.383], [0.988, 0.652, 0.211], [0.940, 0.975, 0.131],
+];
+const CMAP_S = [   // Poynting arrows only: dark green to pale lime
+  [0.03, 0.12, 0.08], [0.06, 0.32, 0.20], [0.12, 0.55, 0.30],
+  [0.35, 0.78, 0.35], [0.70, 0.93, 0.45], [0.95, 1.00, 0.80],
+];
+function cmapJS(t, mode) {
+  const M = mode === 'E' ? CMAP_E : mode === 'B' ? CMAP_B : CMAP_S;
+  t = Math.min(Math.max(t, 0), 1) * (M.length - 1);
+  const i = Math.min(Math.floor(t), M.length - 2), f = t - i;
+  return M[i].map((v, k) => v + (M[i + 1][k] - v) * f);
+}
+
+// ---------------------------------------------------------------- three.js scene
+const container = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0b0e14, 420, 950);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+// frame the scene for the current aspect ratio: wide enough to include the field
+// plane at midspan AND the nearest tower; pull back further on portrait screens
+function setInitialView() {
+  const f = Math.min(2.2, Math.max(1, 1.35 / camera.aspect));
+  camera.position.set(135 * f, 48 + 16 * (f - 1), 165 * f);
+  controls.target.set(0, 18, -55);
+}
+setInitialView();
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.52;
+controls.minDistance = 10;
+controls.maxDistance = 480;
+
+scene.add(new THREE.AmbientLight(0xaebdd6, 0.5));
+const dirLight = new THREE.DirectionalLight(0xfff2dd, 1.25);
+dirLight.position.set(60, 90, 40);
+scene.add(dirLight);
+const rim = new THREE.DirectionalLight(0x6a86ff, 0.35);
+rim.position.set(-50, 30, -80);
+scene.add(rim);
+
+// sky dome: dark zenith to faint blue horizon
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(900, 24, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, fog: false, depthWrite: false,
+    vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `varying vec3 vP;
+      void main(){
+        float h = clamp(vP.y / 900.0, 0.0, 1.0);
+        vec3 horizon = vec3(0.10, 0.14, 0.21);
+        vec3 zenith  = vec3(0.016, 0.022, 0.045);
+        gl_FragColor = vec4(mix(horizon, zenith, pow(h, 0.55)), 1.0);
+      }`,
+  })
+);
+scene.add(sky);
+
+// ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(1400, 1400),
+  new THREE.MeshStandardMaterial({ color: 0x141c17, roughness: 1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02;
+scene.add(ground);
+const grid = new THREE.GridHelper(800, 80, 0x2a3545, 0x18202c);
+grid.position.y = 0.02;
+scene.add(grid);
+
+// ---------------------------------------------------------------- line hardware (towers, conductors, insulators)
+let hardware = new THREE.Group();
+scene.add(hardware);
+const condMat = new THREE.MeshStandardMaterial({ color: 0xc4cad4, metalness: 0.9, roughness: 0.3 });
+const shieldMat = new THREE.MeshStandardMaterial({ color: 0x8a9099, metalness: 0.9, roughness: 0.4 });
+const latticeMat = new THREE.LineBasicMaterial({ color: 0x7d8794, transparent: true, opacity: 0.95 });
+const insMat = new THREE.LineBasicMaterial({ color: 0x9aa6b5 });
+
+const TOWER_ZS = [-3 * SPAN / 2, -SPAN / 2, SPAN / 2, 3 * SPAN / 2]; // field plane at z=0 is midspan
+
+function disposeGroup(g) {
+  g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  g.clear();
+}
+
+// lattice tower as line segments, parametric in arm height / width
+function buildTowerPoints() {
+  const g = geom();
+  const armW = state.spacing + 2.2;
+  const pts = [];
+  const P = (x, y, z) => new THREE.Vector3(x, y, z);
+  const seg = (a, b) => { pts.push(a, b); };
+
+  // body: tapered lower section to waist, straight column ending BELOW the center
+  // conductor (wine-glass tower) so the middle phase hangs through an open window
+  const b0 = Math.min(7.5, Math.max(4, g.armY * 0.17));
+  const w1 = 1.7;
+  const waistY = Math.min(g.armY * 0.55, g.throatY - 2);
+  const rings = [];
+  const NLOW = 4, NUP = 2;
+  for (let i = 0; i <= NLOW; i++) rings.push({ y: waistY * i / NLOW, half: b0 + (w1 - b0) * (i / NLOW) });
+  for (let i = 1; i <= NUP; i++) rings.push({ y: waistY + (g.throatY - waistY) * i / NUP, half: w1 });
+
+  const corner = (r, sx, sz) => P(sx * r.half, r.y, sz * r.half);
+  for (let i = 0; i < rings.length - 1; i++) {
+    const r0 = rings[i], r1 = rings[i + 1];
+    for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]])
+      seg(corner(r0, sx, sz), corner(r1, sx, sz));                       // legs
+    for (const face of [[[1, 1], [1, -1]], [[-1, 1], [-1, -1]], [[1, 1], [-1, 1]], [[1, -1], [-1, -1]]]) {
+      seg(corner(r0, ...face[0]), corner(r1, ...face[1]));               // X bracing
+      seg(corner(r0, ...face[1]), corner(r1, ...face[0]));
+    }
+    for (const [a, b] of [[[1, 1], [1, -1]], [[1, -1], [-1, -1]], [[-1, -1], [-1, 1]], [[-1, 1], [1, 1]]])
+      seg(corner(r1, ...a), corner(r1, ...b));                            // ring
+  }
+
+  // cup arms: two lattice box arms diverging from the column top out to the
+  // crossarm at x = ±xCup, framing the window for the center phase
+  const NCUP = 3;
+  for (const s of [1, -1]) {
+    const frame = t => {
+      const cx = s * (1.25 + (g.xCup - 1.25) * t);
+      const y = g.throatY + (g.armY - g.throatY) * t;
+      const hx = 0.45, hz = w1 + (0.9 - w1) * t;
+      return [P(cx - hx, y, hz), P(cx + hx, y, hz), P(cx + hx, y, -hz), P(cx - hx, y, -hz)];
+    };
+    let f0 = frame(0);
+    seg(f0[0], f0[1]); seg(f0[1], f0[2]); seg(f0[2], f0[3]); seg(f0[3], f0[0]);
+    for (let i = 1; i <= NCUP; i++) {
+      const f1 = frame(i / NCUP);
+      for (let k = 0; k < 4; k++) {
+        seg(f0[k], f1[k]);                                               // chords
+        seg(f0[k], f1[(k + 1) % 4]);                                     // X bracing
+        seg(f0[(k + 1) % 4], f1[k]);
+        seg(f1[k], f1[(k + 1) % 4]);                                     // ring
+      }
+      f0 = f1;
+    }
+  }
+
+  // crossarm: box truss from -armW to +armW
+  const zA = 0.9, yB = g.armY, yT = g.armTop;
+  for (const z of [zA, -zA]) { seg(P(-armW, yB, z), P(armW, yB, z)); seg(P(-armW, yT, z), P(armW, yT, z)); }
+  for (const y of [yB, yT]) { seg(P(-armW, y, zA), P(-armW, y, -zA)); seg(P(armW, y, zA), P(armW, y, -zA)); }
+  const NPAN = Math.max(4, Math.round(armW));
+  for (let i = 0; i <= NPAN; i++) {
+    const x = -armW + 2 * armW * i / NPAN;
+    for (const z of [zA, -zA]) seg(P(x, yB, z), P(x, yT, z));
+    seg(P(x, yB, zA), P(x, yB, -zA));
+    if (i < NPAN) {
+      const x2 = -armW + 2 * armW * (i + 1) / NPAN;
+      for (const z of [zA, -zA]) (i % 2 ? seg(P(x, yB, z), P(x2, yT, z)) : seg(P(x, yT, z), P(x2, yB, z)));
+    }
+  }
+
+  // shield-wire peaks
+  for (const s of [1, -1]) {
+    const px = s * g.shieldX;
+    const tip = P(px, g.shieldPeakY, 0);
+    for (const [bx, bz] of [[px - s * 1.3, zA], [px - s * 1.3, -zA], [px + s * 0.9, zA], [px + s * 0.9, -zA]])
+      seg(P(bx, yT, bz), tip);
+  }
+  return pts;
+}
+
+function buildVStringPoints() {
+  // V-string insulators: two legs from the arm bottom chord meeting at the conductor attach point
+  const g = geom();
+  const pts = [];
+  for (let ph = 0; ph < 3; ph++) {
+    const xp = (ph - 1) * state.spacing;
+    const attach = new THREE.Vector3(xp, g.hAtt, 0);
+    for (const s of [1, -1]) {
+      const top = new THREE.Vector3(xp + s * 1.6, g.armY, 0);
+      // string with small disc ticks
+      pts.push(top, attach);
+      for (let k = 1; k <= 6; k++) {
+        const p = top.clone().lerp(attach, k / 7);
+        const dir = attach.clone().sub(top).normalize();
+        const perp = new THREE.Vector3(-dir.y, dir.x, 0).multiplyScalar(0.22);
+        pts.push(p.clone().add(perp), p.clone().sub(perp));
+      }
+    }
+  }
+  return pts;
+}
+
+function catenaryTube(x, yAttach, sag, z0, z1, radius) {
+  const zc = (z0 + z1) / 2, hs = (z1 - z0) / 2;
+  const pts = [];
+  const NP = 30;
+  for (let i = 0; i <= NP; i++) {
+    const z = z0 + (z1 - z0) * i / NP;
+    const y = yAttach - sag * (1 - ((z - zc) / hs) ** 2);
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  return new THREE.TubeGeometry(curve, 40, radius, 6);
+}
+
+function rebuildHardware() {
+  disposeGroup(hardware);
+  const g = geom();
+
+  // towers
+  const towerGeo = new THREE.BufferGeometry().setFromPoints(buildTowerPoints());
+  const vGeo = new THREE.BufferGeometry().setFromPoints(buildVStringPoints());
+  for (const tz of TOWER_ZS) {
+    const t = new THREE.LineSegments(towerGeo, latticeMat); t.position.z = tz; hardware.add(t);
+    const v = new THREE.LineSegments(vGeo, insMat); v.position.z = tz; hardware.add(v);
+  }
+
+  // phase conductors: catenary spans between towers, bundle offsets constant along span
+  const offs = bundleOffsets();
+  for (let ph = 0; ph < 3; ph++) {
+    const cx = (ph - 1) * state.spacing;
+    for (const [ox, oy] of offs) {
+      for (let s = 0; s < TOWER_ZS.length - 1; s++) {
+        const geo = catenaryTube(cx + ox, g.hAtt + oy, state.sag, TOWER_ZS[s], TOWER_ZS[s + 1], 0.13);
+        hardware.add(new THREE.Mesh(geo, condMat));
+      }
+    }
+  }
+  // shield wires (visual even if excluded from the solve? no — match physics toggle)
+  if (state.shieldWires) {
+    for (const sx of [-g.shieldX, g.shieldX]) {
+      for (let s = 0; s < TOWER_ZS.length - 1; s++) {
+        const geo = catenaryTube(sx, g.shieldPeakY, g.shieldSag, TOWER_ZS[s], TOWER_ZS[s + 1], 0.055);
+        hardware.add(new THREE.Mesh(geo, shieldMat));
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- field plane shader
+const PLANE_W = 96, PLANE_H = 52;
+const fieldUniforms = {
+  uNum:   { value: 0 },
+  uPos:   { value: Array.from({ length: MAXC }, () => new THREE.Vector2()) },
+  uSrcRe: { value: new Float32Array(MAXC) },
+  uSrcIm: { value: new Float32Array(MAXC) },
+  uCosT:  { value: 1 },
+  uSinT:  { value: 0 },
+  uMode:  { value: 0 },
+  uLogLo: { value: Math.log(E_LO) },
+  uLogHi: { value: Math.log(E_HI) },
+  uView:  { value: 0 },
+  uPotScale: { value: 1 },
+  uContourStep: { value: 1 },
+  uShowZero: { value: 0 },
+  uAlpha: { value: 0.94 },
+};
+
+// shared GLSL: uniforms, colormaps, and the 2D field superposition
+const FIELD_GLSL = /* glsl */`
+  const int MAXC = ${MAXC};
+  const float TWO_PI = 6.28318530718;
+  const float EPS0 = 8.854187817e-12;
+  const float MU0 = 1.25663706212e-6;
+  uniform int uNum;
+  uniform vec2 uPos[MAXC];
+  uniform float uSrcRe[MAXC];
+  uniform float uSrcIm[MAXC];
+  uniform float uCosT, uSinT;
+  uniform int uMode;
+  uniform float uLogLo, uLogHi;
+
+  vec3 stopsE(int i) {
+    if (i == 0) return vec3(0.01, 0.03, 0.08);
+    if (i == 1) return vec3(0.04, 0.12, 0.35);
+    if (i == 2) return vec3(0.05, 0.32, 0.65);
+    if (i == 3) return vec3(0.10, 0.58, 0.85);
+    if (i == 4) return vec3(0.35, 0.85, 0.95);
+    return vec3(0.90, 0.99, 1.00);
+  }
+  vec3 stopsB(int i) {
+    if (i == 0) return vec3(0.050, 0.030, 0.528);
+    if (i == 1) return vec3(0.417, 0.001, 0.658);
+    if (i == 2) return vec3(0.694, 0.165, 0.564);
+    if (i == 3) return vec3(0.882, 0.392, 0.383);
+    if (i == 4) return vec3(0.988, 0.652, 0.211);
+    return vec3(0.940, 0.975, 0.131);
+  }
+  vec3 cmap(float t) {
+    t = clamp(t, 0.0, 1.0) * 5.0;
+    int i = int(min(floor(t), 4.0));
+    float f = t - float(i);
+    return uMode == 0 ? mix(stopsE(i), stopsE(i + 1), f) : mix(stopsB(i), stopsB(i + 1), f);
+  }
+
+  // field at p from one source at c (line charge + ground image, or line current)
+  vec2 srcField(vec2 p, vec2 c, float src) {
+    vec2 d = p - c;
+    float r2 = max(dot(d, d), 1e-6);
+    if (uMode == 0) {
+      vec2 f = (src / (TWO_PI * EPS0 * r2)) * d;
+      d = p - vec2(c.x, -c.y);
+      r2 = max(dot(d, d), 1e-6);
+      return f + (-src / (TWO_PI * EPS0 * r2)) * d;
+    }
+    return (MU0 * src / (TWO_PI * r2)) * vec2(-d.y, d.x);
+  }
+  vec2 fieldVec(vec2 p) {
+    vec2 f = vec2(0.0);
+    for (int j = 0; j < MAXC; j++) {
+      if (j >= uNum) break;
+      f += srcField(p, uPos[j], uSrcRe[j] * uCosT - uSrcIm[j] * uSinT);
+    }
+    return f;
+  }
+  float magToT(float mag) {
+    return clamp((log(max(mag, 1e-12)) - uLogLo) / (uLogHi - uLogLo), 0.0, 1.0);
+  }
+  float fieldT(vec2 p) { return magToT(length(fieldVec(p))); }
+
+  // scalar potential: V (E mode, with ground images) or A_z (B mode; its
+  // iso-lines are the magnetic field lines). Balanced sources keep A_z finite.
+  uniform int uView;          // 0 = vector magnitude, 1 = potential contours
+  uniform float uPotScale;    // color saturation amplitude
+  uniform float uContourStep; // physical units per iso-line
+  uniform float uShowZero;    // 1 = highlight the zero-potential contour, 0 = hide
+  float srcPot(vec2 p, vec2 c, float src) {
+    float d1 = max(length(p - c), 1e-3);
+    if (uMode == 0) {
+      float d2 = max(length(p - vec2(c.x, -c.y)), 1e-3);
+      return src / (TWO_PI * EPS0) * log(d2 / d1);
+    }
+    return -MU0 * src / TWO_PI * log(d1);
+  }
+  float potential(vec2 p) {
+    float pot = 0.0;
+    for (int j = 0; j < MAXC; j++) {
+      if (j >= uNum) break;
+      pot += srcPot(p, uPos[j], uSrcRe[j] * uCosT - uSrcIm[j] * uSinT);
+    }
+    return pot;
+  }
+  vec3 divmap(float v);
+  // shared by both planes: potential-contour or magnitude coloring
+  vec4 shadePlane(float pot, vec2 f, float alpha) {
+    if (uView == 1) {
+      vec3 col = divmap(pot / uPotScale);
+      float c = pot / uContourStep;
+      float w = max(fwidth(c), 1e-4);
+      float iso = 1.0 - smoothstep(0.0, w * 1.4, abs(fract(c + 0.5) - 0.5));
+      col = mix(col, vec3(0.92, 0.95, 1.0), iso * 0.7);
+      float z = 1.0 - smoothstep(0.0, w * 2.0, abs(c));   // highlight the zero contour
+      vec3 zeroCol = uMode == 0 ? vec3(0.35, 1.0, 0.85) : vec3(1.0, 1.0, 1.0);
+      col = mix(col, zeroCol, z * 0.85 * uShowZero);
+      return vec4(col, alpha);
+    }
+    return vec4(cmap(magToT(length(f))), alpha);
+  }
+  vec3 divmap(float v) {   // -1 .. +1, dark at zero
+    v = clamp(v, -1.0, 1.0);
+    vec3 z0 = vec3(0.05, 0.06, 0.10);
+    vec3 n1, n5, p5, p1;
+    if (uMode == 0) {        // E potential: blue <-> orange
+      n1 = vec3(0.25, 0.65, 1.00); n5 = vec3(0.12, 0.35, 0.62);
+      p5 = vec3(0.65, 0.28, 0.12); p1 = vec3(1.00, 0.60, 0.22);
+    } else {                 // B flux lines: green <-> magenta
+      n1 = vec3(0.30, 0.95, 0.55); n5 = vec3(0.10, 0.45, 0.32);
+      p5 = vec3(0.55, 0.15, 0.62); p1 = vec3(0.95, 0.45, 1.00);
+    }
+    if (v < -0.5) return mix(n1, n5, (v + 1.0) * 2.0);
+    if (v <  0.0) return mix(n5, z0, (v + 0.5) * 2.0);
+    if (v <  0.5) return mix(z0, p5, v * 2.0);
+    return mix(p5, p1, (v - 0.5) * 2.0);
+  }
+`;
+
+const fieldPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(PLANE_W, PLANE_H),
+  new THREE.ShaderMaterial({
+    uniforms: fieldUniforms,
+    side: THREE.DoubleSide,
+    transparent: true,
+    vertexShader: /* glsl */`
+      varying vec2 vWorld;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorld = wp.xy;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      ${FIELD_GLSL}
+      uniform float uAlpha;
+      varying vec2 vWorld;
+      void main() {
+        gl_FragColor = uView == 1 ? shadePlane(potential(vWorld), vec2(0.0), uAlpha)
+                                  : shadePlane(0.0, fieldVec(vWorld), uAlpha);
+      }`,
+    extensions: { derivatives: true },
+  })
+);
+fieldPlane.position.set(0, PLANE_H / 2, 0);
+scene.add(fieldPlane);
+
+// ---------------------------------------------------------------- XZ (horizontal) field plane
+// Covers the middle span at the probe height. Each pixel uses the 2D solve of
+// its own slice along the line: conductor heights follow the sag parabola in
+// the shader, and the source phasors (which change with height) are solved at
+// NZ_SLICES positions and linearly interpolated from a float texture.
+const NZ_SLICES = 17;
+const srcTexData = new Float32Array(MAXC * NZ_SLICES * 4);
+const srcTex = new THREE.DataTexture(srcTexData, MAXC, NZ_SLICES, THREE.RGBAFormat, THREE.FloatType);
+srcTex.minFilter = srcTex.magFilter = THREE.NearestFilter;
+const groundUniforms = {
+  ...fieldUniforms,                // same objects: time, mode, colormap and contour state stay shared
+  uSrcTex:  { value: srcTex },
+  uMidPos:  { value: Array.from({ length: MAXC }, () => new THREE.Vector2()) },
+  uLift:    { value: new Float32Array(MAXC) },
+  uPlaneY:  { value: 1 },
+};
+const groundPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(2, SPAN),
+  new THREE.ShaderMaterial({
+    uniforms: groundUniforms,
+    side: THREE.DoubleSide,
+    transparent: true,
+    vertexShader: /* glsl */`
+      varying vec2 vXZ;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vXZ = wp.xz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      ${FIELD_GLSL}
+      uniform float uAlpha;
+      uniform sampler2D uSrcTex;     // texel (j, k): source phasor (re, im) of conductor j at slice k
+      uniform vec2 uMidPos[MAXC];    // conductor positions at midspan
+      uniform float uLift[MAXC];     // sag of each conductor (rise from midspan to tower)
+      uniform float uPlaneY;
+      varying vec2 vXZ;
+      void main() {
+        float zn = clamp(vXZ.y / ${(SPAN / 2).toFixed(1)}, -1.0, 1.0);
+        float s = (zn * 0.5 + 0.5) * ${(NZ_SLICES - 1).toFixed(1)};
+        int k0 = int(min(floor(s), ${(NZ_SLICES - 2).toFixed(1)}));
+        float fk = s - float(k0);
+        vec2 p = vec2(vXZ.x, uPlaneY);
+        vec2 f = vec2(0.0);
+        float pot = 0.0;
+        for (int j = 0; j < MAXC; j++) {
+          if (j >= uNum) break;
+          vec2 c = vec2(uMidPos[j].x, uMidPos[j].y + uLift[j] * zn * zn);
+          vec2 ph = mix(texelFetch(uSrcTex, ivec2(j, k0), 0).rg,
+                        texelFetch(uSrcTex, ivec2(j, k0 + 1), 0).rg, fk);
+          float src = ph.x * uCosT - ph.y * uSinT;
+          if (uView == 1) pot += srcPot(p, c, src);
+          else f += srcField(p, c, src);
+        }
+        gl_FragColor = shadePlane(pot, f, uAlpha);
+      }`,
+    extensions: { derivatives: true },
+  })
+);
+groundPlane.rotation.x = -Math.PI / 2;
+groundPlane.visible = false;
+scene.add(groundPlane);
+
+let sliceSets = [];   // conductor solves at NZ_SLICES positions across the middle span
+function pushGroundUniforms() {
+  const isE = state.mode === 'E', g = geom();
+  sliceSets.forEach((set, k) => set.forEach((c, j) => {
+    const o = (k * MAXC + j) * 4;
+    srcTexData[o]     = isE ? c.qRe : c.iRe;
+    srcTexData[o + 1] = isE ? c.qIm : c.iIm;
+  }));
+  srcTex.needsUpdate = true;
+  conductorsMid.forEach((c, j) => {
+    groundUniforms.uMidPos.value[j].set(c.x, c.y);
+    groundUniforms.uLift.value[j] = c.shield ? g.shieldSag : state.sag;
+  });
+}
+function placeGroundPlane() {
+  groundUniforms.uPlaneY.value = state.probeH;
+  groundPlane.position.y = Math.max(state.probeH, 0.06);   // stay above the grid lines
+}
+
+// (3D field visualization: instanced mini-arrows, defined after the arrow glyph below)
+
+function pushUniforms() {
+  fieldUniforms.uNum.value = conductors.length;
+  conductors.forEach((c, i) => {
+    fieldUniforms.uPos.value[i].set(c.x, c.y);
+    if (state.mode === 'E') {
+      fieldUniforms.uSrcRe.value[i] = c.qRe;
+      fieldUniforms.uSrcIm.value[i] = c.qIm;
+    } else {
+      fieldUniforms.uSrcRe.value[i] = c.iRe;
+      fieldUniforms.uSrcIm.value[i] = c.iIm;
+    }
+  });
+  fieldUniforms.uMode.value = state.mode === 'E' ? 0 : 1;
+  fieldUniforms.uLogLo.value = Math.log(activeLo());
+  fieldUniforms.uLogHi.value = Math.log(state.mode === 'E' ? E_HI : B_HI);
+  fieldUniforms.uView.value = state.showContours ? 1 : 0;
+  fieldUniforms.uShowZero.value = state.showZero ? 1 : 0;
+  if (state.showContours) {
+    // saturation amplitude: max potential phasor over the significant region
+    const ext = fieldExtent || 40;
+    let m = 0;
+    for (let xi = 0; xi <= 12; xi++)
+      for (let yi = 0; yi <= 7; yi++)
+        m = Math.max(m, potAmpAt(-ext + 2 * ext * xi / 12, 1 + 46 * yi / 7));
+    fieldUniforms.uPotScale.value = m > 0 ? m : 1;
+    fieldUniforms.uContourStep.value = (m > 0 ? m : 1) / 8;
+    buildPotGrid();
+  }
+  sheets.material.uniforms.uSagAmp.value = state.sag;
+  pushGroundUniforms();
+}
+
+// ---------------------------------------------------------------- direction arrows (instanced cones)
+// Arrow lattices are centered on the phase conductors: columns sit at
+// (k + 1/2)·dx with dx = spacing / n, so every phase (x = 0, ±spacing) falls
+// exactly midway between two columns; rows sit at yc + (j + 1/2)·dy around the
+// bundle-center height yc. Each point carries the parity of k + j so E and B
+// can share one lattice as a checkerboard, both symmetric about each conductor.
+// Instance buffers are sized for the column/row caps; mesh.count tracks usage.
+function conductorLattice(X, targetDx, maxCols, dy, yc, yMin, yMax) {
+  const dx = state.spacing / Math.max(1, Math.round(state.spacing / targetDx));
+  const K = Math.min(Math.ceil(X / dx), maxCols / 2);
+  const pts = [];
+  for (let k = -K; k < K; k++)
+    for (let j = Math.ceil((yMin - yc) / dy - 0.5); yc + (j + 0.5) * dy <= yMax; j++)
+      pts.push({ x: (k + 0.5) * dx, y: yc + (j + 0.5) * dy, p: ((k + j) % 2 + 2) % 2 });
+  return pts;
+}
+const ARROW_MAXCOLS = 24, ARROW_DY = 3.6;
+const N_ARROWS = ARROW_MAXCOLS * (Math.ceil(48 / ARROW_DY) + 2);
+let arrowPts = [];
+function buildArrowGrid(X) {
+  // the cross-section plane cuts the conductors at their height at planeZ
+  const yc = state.height + state.sag * (state.planeZ / (SPAN / 2)) ** 2;
+  arrowPts = conductorLattice(X, 2 * X / 21, ARROW_MAXCOLS, ARROW_DY, yc, 1.2, 49);
+}
+// which lattice points a field uses: E and B split the checkerboard when both
+// are on (otherwise each takes every point); S points along the line, so it
+// never collides with them in the plane and takes every point
+function arrowParity(m) {
+  if (m === 'S' || !(state.arrowFields.E && state.arrowFields.B)) return -1;
+  return m === 'E' ? 0 : 1;
+}
+// proper arrow glyph (shaft + head), pivot at center so it rotates in place
+const arrowShaft = new THREE.CylinderGeometry(0.055, 0.055, 0.68, 5);
+arrowShaft.translate(0, -0.16, 0);
+const arrowHead = new THREE.ConeGeometry(0.19, 0.42, 8);
+arrowHead.translate(0, 0.29, 0);
+const arrowGeo = mergeGeometries([arrowShaft, arrowHead]);
+const arrowMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95 });
+
+// E, B and S arrows can be shown together, so each field gets its own instanced
+// meshes (plane + volume); see arrowParity for how they share the lattice
+const ARROW_FIELDS = ['E', 'B', 'S'];
+const arrowSets = {};
+function makeArrowMesh(mat, n) {
+  const mesh = new THREE.InstancedMesh(arrowGeo, mat, n);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+  mesh.visible = false;
+  mesh.frustumCulled = false;      // the instance layout changes with the lattice
+  scene.add(mesh);
+  return mesh;
+}
+// two instances per grid point: one on each face of the cross-section plane
+for (const m of ARROW_FIELDS) arrowSets[m] = { plane: makeArrowMesh(arrowMat, N_ARROWS * 2) };
+
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0), _dir = new THREE.Vector3(), _pos = new THREE.Vector3();
+const _c = new THREE.Color();
+
+// one magnitude-to-size law shared by the plane and volume arrows:
+// length grows with normalized magnitude from 0, hidden below a very low cutoff
+const ARROW_TMIN = 0.05;
+function arrowSize(t) {
+  if (t < ARROW_TMIN) return null;      // field essentially zero here: no arrow
+  return { len: 5.2 * t, w: 0.55 + 1.4 * t };
+}
+
+// log-scale range per arrow field; each floor is the user-set one for that field,
+// and the Poynting range is the product of the E and B ranges (S = E·B / µ0)
+function rangeFor(m) {
+  const eLo = 10 ** state.eLoExp, bLo = 10 ** state.bLoExp;
+  if (m === 'E') return [eLo, E_HI];
+  if (m === 'B') return [bLo, B_HI];
+  return [eLo * bLo / MU0, E_HI * B_HI / MU0];
+}
+// normalized magnitude 0..1 on the log scale with the user-set floor
+function magT(mag, m) {
+  const [lo, hi] = rangeFor(m);
+  const t = (Math.log(Math.max(mag, 1e-12)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo));
+  return Math.min(Math.max(t, 0), 1);
+}
+
+// arrow vector: E or B in the cross-section plane, or the instantaneous Poynting
+// vector S = E x B / µ0, which points along the line (±z) since E and B are both
+// transverse
+function arrowVecAt(x, y, cosT, sinT, set, m) {
+  if (m !== 'S') return [...fieldAt(x, y, cosT, sinT, m, set), 0];
+  const [ex, ey] = fieldAt(x, y, cosT, sinT, 'E', set);
+  const [bx, by] = fieldAt(x, y, cosT, sinT, 'B', set);
+  return [0, 0, (ex * by - ey * bx) / MU0];
+}
+// sets _q, _s, _c (orientation, size, color) for the field-m arrow at (x, y)
+function sampleArrow(x, y, cosT, sinT, set, m) {
+  const [fx, fy, fz] = arrowVecAt(x, y, cosT, sinT, set, m);
+  const mag = Math.hypot(fx, fy, fz);
+  const t = magT(mag, m);
+  const sz = arrowSize(t);
+  _dir.set(fx / (mag || 1), fy / (mag || 1), fz / (mag || 1));
+  if (mag === 0) _dir.set(0, 1, 0);
+  _q.setFromUnitVectors(_up, _dir);
+  _s.set(sz ? sz.w : 0, sz ? sz.len : 0, sz ? sz.w : 0);
+  const [cr, cg, cb] = cmapJS(0.22 + 0.78 * t, m);  // colormap-matched, floor-lifted
+  _c.setRGB(cr, cg, cb);
+}
+
+function updateArrows(cosT, sinT, m) {
+  const mesh = arrowSets[m].plane;
+  const par = arrowParity(m);
+  let idx = 0;
+  for (const { x, y, p } of arrowPts) {
+    if (par >= 0 && p !== par) continue;
+    sampleArrow(x, y, cosT, sinT, conductors, m);
+    for (const dz of [0.45, -0.45]) {
+      _pos.set(x, y, state.planeZ + dz);
+      _m.compose(_pos, _q, _s);
+      mesh.setMatrixAt(idx, _m);
+      mesh.setColorAt(idx, _c);
+      idx++;
+    }
+  }
+  mesh.count = idx;
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- 3D volume mini-arrows
+// The field is invariant along the line, so each (x, y) column is computed once
+// and reused for every z — a full 3D quiver at the cost of a 2D one. Columns use
+// the same conductor-centered lattice at midspan; the sag lift below carries the
+// whole pattern (conductors included) up toward the towers, so it stays centered.
+const VOL_MAXCOLS = 26, VOL_DY = 3.2;
+let volPts = [];
+function buildVolGrid(X) {
+  volPts = conductorLattice(X, 2 * X / 24, VOL_MAXCOLS, VOL_DY, state.height, 1.5, 48);
+}
+const VOL_DZ = 6.5;
+const volZs = [];
+for (let z = -128; z <= 128; z += VOL_DZ) volZs.push(z);
+const N_VOL = VOL_MAXCOLS * (Math.ceil(47 / VOL_DY) + 2) * volZs.length;
+const volGeo = arrowGeo;   // same glyph and size law as the cross-section arrows
+const volMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6 });
+for (const m of ARROW_FIELDS) arrowSets[m].vol = makeArrowMesh(volMat, N_VOL);
+
+// vertical offset of the whole field pattern along the span (follows the sag)
+const sagLift = z => state.sag * (z / (SPAN / 2)) ** 2;
+
+function updateVolArrows(cosT, sinT, m) {
+  const mesh = arrowSets[m].vol;
+  const par = arrowParity(m);
+  // S arrows point along z, so they sit half a z-step behind the E/B slices
+  const oz = m === 'S' ? VOL_DZ / 2 : 0;
+  const lifts = volZs.map(z => sagLift(z + oz));
+  let idx = 0;
+  for (const { x, y, p } of volPts) {
+    if (par >= 0 && p !== par) continue;
+    sampleArrow(x, y, cosT, sinT, conductorsMid, m);
+    for (let zi = 0; zi < volZs.length; zi++) {
+      _pos.set(x, y + lifts[zi], volZs[zi] + oz);
+      _m.compose(_pos, _q, _s);
+      mesh.setMatrixAt(idx, _m);
+      mesh.setColorAt(idx, _c);
+      idx++;
+    }
+  }
+  mesh.count = idx;
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- 3D iso-potential sheets
+// Level sets of V (or A_z) extruded along the line into translucent surfaces.
+// Marching squares runs on a precomputed phasor grid every frame; only the
+// two multiplies per node depend on time.
+const SHEET_NX = 120, SHEET_NY = 60;          // cells; nodes are +1
+const SHEET_Z = 110, SHEET_FADE = 35;         // extrusion half-length, end fade (m)
+const SHEET_BANDS = 8;                        // z subdivisions so sheets can follow the sag
+const SHEET_MAXQUAD = 24000;                  // total quad budget (segments x bands)
+const BAND_Z = [];
+for (let k = 0; k <= SHEET_BANDS; k++) BAND_Z.push(-SHEET_Z + 2 * SHEET_Z * k / SHEET_BANDS);
+const sheetPotRe = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+const sheetPotIm = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+const sheetPotNow = new Float32Array((SHEET_NX + 1) * (SHEET_NY + 1));
+let sheetXs = new Float32Array(SHEET_NX + 1);
+const sheetYs = new Float32Array(SHEET_NY + 1);
+for (let j = 0; j <= SHEET_NY; j++) sheetYs[j] = 50 * j / SHEET_NY;
+
+let sheetScale = 1;   // sheet level normalization from the midspan solve
+function buildPotGrid() {
+  const ext = fieldExtent || 40;
+  for (let i = 0; i <= SHEET_NX; i++) sheetXs[i] = -ext + 2 * ext * i / SHEET_NX;
+  let n = 0, m = 0;
+  for (let j = 0; j <= SHEET_NY; j++)
+    for (let i = 0; i <= SHEET_NX; i++, n++) {
+      const [re, im] = potPhasorAt(sheetXs[i], sheetYs[j], conductorsMid);
+      sheetPotRe[n] = re; sheetPotIm[n] = im;
+      const a = Math.hypot(re, im);
+      if (a > m) m = a;
+    }
+  sheetScale = m > 0 ? m : 1;
+}
+
+const sheetGeo = new THREE.BufferGeometry();
+const sheetPos = new Float32Array(SHEET_MAXQUAD * 6 * 3);
+const sheetCol = new Float32Array(SHEET_MAXQUAD * 6 * 3);
+const sheetAlp = new Float32Array(SHEET_MAXQUAD * 6);
+sheetGeo.setAttribute('position', new THREE.BufferAttribute(sheetPos, 3).setUsage(THREE.DynamicDrawUsage));
+sheetGeo.setAttribute('color', new THREE.BufferAttribute(sheetCol, 3).setUsage(THREE.DynamicDrawUsage));
+sheetGeo.setAttribute('aAlpha', new THREE.BufferAttribute(sheetAlp, 1).setUsage(THREE.DynamicDrawUsage));
+const sheets = new THREE.Mesh(sheetGeo, new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  uniforms: { uSagAmp: { value: 7 } },
+  vertexShader: /* glsl */`
+    uniform float uSagAmp;
+    attribute float aAlpha;
+    varying vec3 vColor;
+    varying float vAlpha;
+    varying float vZ;
+    void main() {
+      vColor = color;
+      vAlpha = aAlpha;
+      vZ = position.z;
+      vec3 p = position;
+      float zn = p.z / ${(SPAN / 2).toFixed(1)};
+      p.y += uSagAmp * zn * zn;              // follow the conductor sag along the span
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec3 vColor;
+    varying float vAlpha;
+    varying float vZ;
+    void main() {
+      float a = vAlpha * smoothstep(${SHEET_Z.toFixed(1)}, ${(SHEET_Z - SHEET_FADE).toFixed(1)}, abs(vZ));
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor, a);
+    }`,
+  vertexColors: true,
+}));
+sheets.frustumCulled = false;
+sheets.renderOrder = 2;
+sheets.visible = false;
+scene.add(sheets);
+
+// marching-squares edge pairs per case (edges: 0 bottom, 1 right, 2 top, 3 left)
+const MS_TABLE = [
+  [], [[0, 3]], [[0, 1]], [[3, 1]],
+  [[1, 2]], [[0, 3], [1, 2]], [[0, 2]], [[3, 2]],
+  [[3, 2]], [[0, 2]], [[0, 1], [2, 3]], [[1, 2]],
+  [[3, 1]], [[0, 1]], [[0, 3]], [],
+];
+
+function updateSheets(cosT, sinT) {
+  const NN = (SHEET_NX + 1) * (SHEET_NY + 1);
+  for (let n = 0; n < NN; n++) sheetPotNow[n] = sheetPotRe[n] * cosT - sheetPotIm[n] * sinT;
+
+  const scale = sheetScale;
+  const levels = [], colors = [], alphas = [];
+  if (state.showZero) { levels.push(0); colors.push(state.mode === 'E' ? [0.35, 1.0, 0.85] : [1.0, 1.0, 1.0]); alphas.push(0.5); }
+  for (const f of [0.15, 0.35, 0.6]) {
+    for (const s of [1, -1]) {
+      levels.push(s * f * scale);
+      colors.push(divmapJS(s * (0.45 + 0.55 * f)).map(c => Math.min(c * 1.25, 1)));
+      alphas.push(0.26);
+    }
+  }
+
+  let quad = 0;
+  const ex = [0, 0, 0, 0], ey = [0, 0, 0, 0];   // interpolated crossing per edge
+  for (let li = 0; li < levels.length; li++) {
+    const L = levels[li], [cr, cg, cb] = colors[li], al = alphas[li];
+    for (let j = 0; j < SHEET_NY && quad + SHEET_BANDS <= SHEET_MAXQUAD; j++) {
+      const row = j * (SHEET_NX + 1);
+      for (let i = 0; i < SHEET_NX; i++) {
+        const va = sheetPotNow[row + i] - L;
+        const vb = sheetPotNow[row + i + 1] - L;
+        const vc = sheetPotNow[row + SHEET_NX + 1 + i + 1] - L;
+        const vd = sheetPotNow[row + SHEET_NX + 1 + i] - L;
+        const code = (va > 0 ? 1 : 0) | (vb > 0 ? 2 : 0) | (vc > 0 ? 4 : 0) | (vd > 0 ? 8 : 0);
+        if (code === 0 || code === 15) continue;
+        const x0 = sheetXs[i], x1 = sheetXs[i + 1], y0 = sheetYs[j], y1 = sheetYs[j + 1];
+        // edge crossings (linear interpolation)
+        ex[0] = x0 + (x1 - x0) * va / (va - vb); ey[0] = y0;          // bottom a-b
+        ex[1] = x1; ey[1] = y0 + (y1 - y0) * vb / (vb - vc);          // right  b-c
+        ex[2] = x0 + (x1 - x0) * vd / (vd - vc); ey[2] = y1;          // top    d-c
+        ex[3] = x0; ey[3] = y0 + (y1 - y0) * va / (va - vd);          // left   a-d
+        for (const [e1, e2] of MS_TABLE[code]) {
+          if (quad + SHEET_BANDS > SHEET_MAXQUAD) break;
+          const ax = ex[e1], ay = ey[e1], bx = ex[e2], by = ey[e2];
+          // one strip of quads along z; the vertex shader adds the sag bend
+          for (let k = 0; k < SHEET_BANDS; k++) {
+            const z0 = BAND_Z[k], z1 = BAND_Z[k + 1];
+            const p = quad * 18, q = quad * 6;
+            sheetPos.set([ax, ay, z0, bx, by, z0, bx, by, z1,
+                          ax, ay, z0, bx, by, z1, ax, ay, z1], p);
+            for (let v = 0; v < 6; v++) {
+              sheetCol[p + v * 3] = cr; sheetCol[p + v * 3 + 1] = cg; sheetCol[p + v * 3 + 2] = cb;
+              sheetAlp[q + v] = al;
+            }
+            quad++;
+          }
+        }
+      }
+    }
+  }
+  sheetGeo.setDrawRange(0, quad * 6);
+  sheetGeo.attributes.position.needsUpdate = true;
+  sheetGeo.attributes.color.needsUpdate = true;
+  sheetGeo.attributes.aAlpha.needsUpdate = true;
+}
+
+function syncSheetsVisible() {
+  sheets.visible = state.showSheets && state.showContours;
+}
+
+// ---------------------------------------------------------------- legend
+function fmtE(v) { return v >= 1000 ? (v / 1000).toLocaleString() + ' kV/m' : v + ' V/m'; }
+function fmtB(v) { return (v * 1e6).toLocaleString() + ' µT'; }
+// divergent stops [neg extreme, neg mid, zero, pos mid, pos extreme]; per mode so
+// E potential (blue<->orange) and B flux lines (green<->magenta) read differently
+const DIVMAP_E = [[0.25, 0.65, 1.0], [0.12, 0.35, 0.62], [0.05, 0.06, 0.10], [0.65, 0.28, 0.12], [1.0, 0.60, 0.22]];
+const DIVMAP_B = [[0.30, 0.95, 0.55], [0.10, 0.45, 0.32], [0.05, 0.06, 0.10], [0.55, 0.15, 0.62], [0.95, 0.45, 1.0]];
+function divmapJS(v) {
+  v = Math.min(Math.max(v, -1), 1);
+  const S = state.mode === 'E' ? DIVMAP_E : DIVMAP_B;
+  const t = (v + 1) / 2 * 4, i = Math.min(Math.floor(t), 3), fr = t - i;
+  return S[i].map((c, k) => c + (S[i + 1][k] - c) * fr);
+}
+function fmtPot(v) {
+  return state.mode === 'E'
+    ? Number((v / 1000).toPrecision(3)).toLocaleString() + ' kV'
+    : Number((v * 1000).toPrecision(2)) + ' mWb/m';
+}
+function drawLegend() {
+  const cv = document.getElementById('legendCanvas');
+  const ctx = cv.getContext('2d');
+  const isE = state.mode === 'E';
+  const isPot = state.showContours;
+  for (let i = 0; i < cv.height; i++) {
+    const t = 1 - i / (cv.height - 1);
+    const [r, g, b] = isPot ? divmapJS(t * 2 - 1) : cmapJS(t, state.mode);
+    ctx.fillStyle = `rgb(${r * 255},${g * 255},${b * 255})`;
+    ctx.fillRect(0, i, cv.width, 1);
+  }
+  document.getElementById('loInput').style.display = isPot ? 'none' : '';
+  document.getElementById('loUnit').style.display = isPot ? 'none' : '';
+  document.getElementById('legLoTxt').style.display = isPot ? '' : 'none';
+  if (isPot) {
+    const s = fieldUniforms.uPotScale.value;
+    document.getElementById('legendTitle').textContent = isE ? 'V potential' : 'Flux lines (Aᴢ)';
+    document.getElementById('legHi').textContent = '+ ' + fmtPot(s);
+    document.getElementById('legMid').textContent = '0';
+    document.getElementById('legLoTxt').textContent = '− ' + fmtPot(s);
+  } else {
+    document.getElementById('legendTitle').textContent = isE ? '|E| field' : '|B| field';
+    const f = isE ? fmtE : fmtB;
+    const lo = activeLo(), hi = isE ? E_HI : B_HI;
+    const mid = Math.exp((Math.log(lo) + Math.log(hi)) / 2);
+    document.getElementById('legHi').textContent = '≥ ' + f(hi);
+    document.getElementById('legMid').textContent = f(Number(mid.toPrecision(1)));
+  }
+  drawArrowLegend();
+}
+function fmtS(v) {
+  const p = x => Number(x.toPrecision(2)).toLocaleString();
+  return v >= 1e6 ? p(v / 1e6) + ' MW/m²' : v >= 1e3 ? p(v / 1e3) + ' kW/m²' : p(v) + ' W/m²';
+}
+// compact scales for every arrow layer that the color map doesn't already
+// explain (all of them in contours view, where the map is a potential)
+function drawArrowLegend() {
+  const box = document.getElementById('arrowLegend');
+  const fields = state.showVectors
+    ? ARROW_FIELDS.filter(m => state.arrowFields[m] && (m !== state.mode || state.showContours)) : [];
+  box.style.display = fields.length ? 'block' : 'none';
+  box.innerHTML = '';
+  for (const m of fields) {
+    const [lo, hi] = rangeFor(m);
+    const f = m === 'E' ? fmtE : m === 'B' ? fmtB : fmtS;
+    const round = v => m === 'S' ? v : Number(v.toPrecision(2));
+    const row = document.createElement('div');
+    row.className = 'arrow-leg';
+    row.innerHTML = `<div class="arrow-leg-title">${m === 'S' ? 'Arrows: S = E×H (power flow)' : `Arrows: |${m}| field`}</div>
+      <canvas width="110" height="8"></canvas>
+      <div class="arrow-leg-labels"><span>${f(round(lo))}</span><span>${f(round(hi))}</span></div>`;
+    const cv = row.querySelector('canvas'), ctx = cv.getContext('2d');
+    for (let i = 0; i < cv.width; i++) {
+      const [r, g, b] = cmapJS(0.22 + 0.78 * i / (cv.width - 1), m);
+      ctx.fillStyle = `rgb(${r * 255},${g * 255},${b * 255})`;
+      ctx.fillRect(i, 0, 1, cv.height);
+    }
+    box.appendChild(row);
+  }
+}
+
+// ---------------------------------------------------------------- ground-level profile chart
+function drawChart() {
+  const cv = document.getElementById('chartCanvas');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const isE = state.mode === 'E';
+  ctx.clearRect(0, 0, W, H);
+
+  const X0 = 78, X1 = W - 16, Y0 = 14, Y1 = H - 40;
+  const unit = v => isE ? v / 1000 : v * 1e6;   // kV/m or µT
+
+  // x range follows the shared significant-field extent, which only changes
+  // with the line configuration or mode — never with the probe height
+  const xMax = fieldExtent || 40;
+  const xMin = -xMax, NPTS = 160;
+
+  // fixed Y ceiling: 1.1 x the profile max at the height slider's maximum (10 m),
+  // so the axis holds still while the probe height moves
+  const PROBE_MAX = 10;
+  let peakTop = 0;
+  for (let x = 0; x <= 150; x += 2)
+    peakTop = Math.max(peakTop, unit(rmsAt(x, PROBE_MAX, state.mode)),
+                                unit(rmsAt(-x, PROBE_MAX, state.mode)));
+  const yMax = peakTop > 0 ? peakTop * 1.1 : 1;
+
+  const ys = [];
+  for (let i = 0; i <= NPTS; i++) {
+    const x = xMin + (xMax - xMin) * i / NPTS;
+    ys.push(Math.min(unit(rmsAt(x, state.probeH, state.mode)), yMax));
+  }
+
+  ctx.strokeStyle = '#26303f'; ctx.fillStyle = '#9fb0c4';
+  ctx.font = '26px "Segoe UI"'; ctx.lineWidth = 1;
+  ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let g = 0; g <= 4; g++) {
+    const yv = yMax * g / 4;
+    const yp = Y1 - (Y1 - Y0) * g / 4;
+    ctx.beginPath(); ctx.moveTo(X0, yp); ctx.lineTo(X1, yp);
+    ctx.strokeStyle = g === 0 ? '#26303f' : '#1a2230'; ctx.stroke();
+    ctx.fillText(yv.toPrecision(2), X0 - 6, yp);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let g = 0; g <= 4; g++) {
+    const xv = xMin + (xMax - xMin) * g / 4;
+    const xp = X0 + (X1 - X0) * g / 4;
+    ctx.fillText(Math.round(xv) + ' m', xp, Y1 + 6);
+  }
+  ctx.beginPath();
+  for (let i = 0; i <= NPTS; i++) {
+    const xp = X0 + (X1 - X0) * i / NPTS;
+    const yp = Y1 - (Y1 - Y0) * ys[i] / yMax;
+    i === 0 ? ctx.moveTo(xp, yp) : ctx.lineTo(xp, yp);
+  }
+  ctx.strokeStyle = isE ? '#5cc8ff' : '#fca636';
+  ctx.lineWidth = 3.5; ctx.stroke();
+
+  const hTxt = state.probeH.toFixed(2) + ' m';
+  document.getElementById('chartTitle').textContent = isE
+    ? `E-field profile (rms, kV/m, at ${hTxt} height)`
+    : `B-field profile (rms, µT, at ${hTxt} height)`;
+
+  let eMax = 0, bMax = 0;
+  for (let i = 0; i <= NPTS; i++) {
+    const x = xMin + (xMax - xMin) * i / NPTS;
+    eMax = Math.max(eMax, rmsAt(x, state.probeH, 'E'));
+    bMax = Math.max(bMax, rmsAt(x, state.probeH, 'B'));
+  }
+  const nPhase = conductors.filter(c => !c.shield).length;
+  document.getElementById('readout').innerHTML =
+    `Max E (${hTxt}): <b>${(eMax / 1000).toFixed(2)} kV/m</b><br>` +
+    `Max B (${hTxt}): <b>${(bMax * 1e6).toFixed(2)} µT</b><br>` +
+    `Phase subconductors: <b>${nPhase}</b>` +
+    (state.shieldWires ? ` &nbsp;·&nbsp; shields: <b>2</b>` : '');
+}
+
+// ---------------------------------------------------------------- phasor clock
+const phasorCv = document.getElementById('phasorCanvas');
+const phasorCtx = phasorCv.getContext('2d');
+function drawPhasors(theta) {
+  const ctx = phasorCtx, W = phasorCv.width, H = phasorCv.height;
+  const cx = W / 2, cy = H / 2, R = W * 0.36;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#26303f'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - R - 8, cy); ctx.lineTo(cx + R + 8, cy);
+  ctx.moveTo(cx, cy - R - 8); ctx.lineTo(cx, cy + R + 8);
+  ctx.strokeStyle = '#1a2230'; ctx.stroke();
+  const names = ['A', 'B', 'C'];
+  ctx.font = 'bold 26px "Segoe UI"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let ph = 0; ph < 3; ph++) {
+    const a = theta + PHASE_ANGLES[ph];
+    const x = cx + R * Math.cos(a), y = cy - R * Math.sin(a);
+    ctx.strokeStyle = PHASE_COLORS[ph]; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = PHASE_COLORS[ph];
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * Math.PI); ctx.fill();
+    const lx = cx + (R + 24) * Math.cos(a), ly = cy - (R + 24) * Math.sin(a);
+    ctx.fillText(names[ph], lx, ly);
+  }
+}
+
+// ---------------------------------------------------------------- UI wiring
+// shared significant-field extent: the arrow grids and the plane width follow
+// the same 5%-of-peak decay rule the profile chart uses (sampled at several
+// heights so it reflects the whole cross-section, not just the probe height)
+let fieldExtent = 0;
+function updateFieldExtent() {
+  let peak = 0, edge = 30;
+  for (let x = 0; x <= 150; x += 2.5) {
+    let v = 0;
+    for (const h of [1, 10, 25])
+      v = Math.max(v, rmsAt(x, h, state.mode, conductorsMid), rmsAt(-x, h, state.mode, conductorsMid));
+    if (v > peak) peak = v;
+    if (v >= peak * 0.05) edge = x;
+  }
+  const X = Math.min(150, Math.max(40, Math.ceil(edge * 1.1 / 10) * 10));
+  fieldExtent = X;
+  // rebuilt on every refresh: the conductor-centered lattices also depend on
+  // spacing, height, sag and the cross-section position, not just the extent
+  buildArrowGrid(X);
+  buildVolGrid(X);
+  fieldPlane.scale.x = Math.max(1, X / 48);   // widen the plane past its base ±48 m
+  groundPlane.scale.x = Math.max(48, X);
+}
+
+let geomKey = '';
+function refreshAll() {
+  solveLine();
+  const key = [state.spacing, state.height, state.sag, state.nSub, state.bundleSpacing, state.shieldWires].join('|');
+  if (key !== geomKey) { rebuildHardware(); geomKey = key; }
+  fieldPlane.position.z = state.planeZ;
+  updateFieldExtent();
+  pushUniforms();
+  drawLegend();
+  drawChart();
+}
+
+// paint the filled portion of a slider track (inline backgroundImage so the
+// CSS background-color stays as the empty-track base)
+function paintSlider(el, vertical = false) {
+  const p = (el.value - el.min) / (el.max - el.min) * 100;
+  el.style.backgroundImage =
+    `linear-gradient(${vertical ? 'to top' : 'to right'}, #4a8fdd 0%, #4a8fdd ${p}%, transparent ${p}%)`;
+}
+
+function bindSlider(id, valId, get, set, fmt) {
+  const el = document.getElementById(id), lab = document.getElementById(valId);
+  el.value = get();
+  lab.textContent = fmt(get());
+  paintSlider(el);
+  el.addEventListener('input', () => {
+    set(parseFloat(el.value));
+    lab.textContent = fmt(get());
+    paintSlider(el);
+    refreshAll();
+  });
+}
+bindSlider('vSlider', 'vVal', () => state.vLL / 1000, v => state.vLL = v * 1000, v => v + ' kV');
+bindSlider('iSlider', 'iVal', () => state.iRms, v => state.iRms = v, v => v + ' A');
+bindSlider('sSlider', 'sVal', () => state.spacing, v => state.spacing = v, v => v + ' m');
+bindSlider('hSlider', 'hVal', () => state.height, v => state.height = v, v => v + ' m');
+bindSlider('nSlider', 'nVal', () => state.nSub, v => state.nSub = Math.round(v), v => '' + v);
+bindSlider('bSlider', 'bVal', () => state.bundleSpacing * 100, v => state.bundleSpacing = v / 100, v => v + ' cm');
+bindSlider('dSlider', 'dVal', () => state.condDiam, v => state.condDiam = v, v => v.toFixed(1) + ' mm');
+bindSlider('sagSlider', 'sagVal', () => state.sag, v => state.sag = v, v => v + ' m');
+bindSlider('aSlider', 'aVal', () => state.visHz, v => state.visHz = v, v => v.toFixed(2) + ' cyc/s');
+bindSlider('zSlider', 'zVal', () => state.planeZ, v => state.planeZ = v, v => v === 0 ? 'midspan' : (v > 0 ? '+' : '') + v + ' m');
+
+// cross-section opacity: shader-only, no physics re-solve
+const paSlider = document.getElementById('paSlider'), paVal = document.getElementById('paVal');
+const fmtAlpha = v => Math.round(v * 100) + '%';
+paSlider.value = state.planeAlpha;
+paVal.textContent = fmtAlpha(state.planeAlpha);
+paintSlider(paSlider);
+paSlider.addEventListener('input', () => {
+  state.planeAlpha = parseFloat(paSlider.value);
+  fieldUniforms.uAlpha.value = state.planeAlpha;
+  paVal.textContent = fmtAlpha(state.planeAlpha);
+  paintSlider(paSlider);
+});
+
+const btnE = document.getElementById('btnE'), btnB = document.getElementById('btnB');
+function setMode(m) {
+  state.mode = m;
+  btnE.classList.toggle('active', m === 'E');
+  btnB.classList.toggle('active', m === 'B');
+  syncLoInput();                     // each mode remembers its own floor
+  updateFieldExtent();               // E and B decay differently
+  pushUniforms(); drawLegend(); drawChart();
+}
+btnE.addEventListener('click', () => setMode('E'));
+btnB.addEventListener('click', () => setMode('B'));
+
+// arrow layers, independent of the color map and of each other: any mix of
+// E, B and the Poynting vector S
+const arrowBtns = ARROW_FIELDS.map(m => document.getElementById('arr' + m));
+function toggleArrowField(m) {
+  state.arrowFields[m] = !state.arrowFields[m];
+  arrowBtns.forEach((b, i) => b.classList.toggle('active', state.arrowFields[ARROW_FIELDS[i]]));
+  applyVectorVisibility();
+  drawArrowLegend();
+}
+arrowBtns.forEach((b, i) => b.addEventListener('click', () => toggleArrowField(ARROW_FIELDS[i])));
+
+// independent layer toggles: Vectors gates all field arrows, Contours switches
+// the potential layer (plane rendering + 3D sheets)
+const btnVec = document.getElementById('btnVec'), btnPot = document.getElementById('btnPot');
+function applyVectorVisibility() {
+  // in-plane arrows only on the XY plane: on XZ the field is mostly out of plane
+  for (const m of ARROW_FIELDS) {
+    const on = state.showVectors && state.arrowFields[m];
+    arrowSets[m].plane.visible = on && state.showArrows && state.showPlane && state.planeOrient === 'XY';
+    arrowSets[m].vol.visible = on && state.showVolArrows;
+  }
+}
+btnVec.addEventListener('click', () => {
+  state.showVectors = !state.showVectors;
+  btnVec.classList.toggle('active', state.showVectors);
+  applyVectorVisibility();
+  drawArrowLegend();
+});
+btnPot.addEventListener('click', () => {
+  state.showContours = !state.showContours;
+  btnPot.classList.toggle('active', state.showContours);
+  syncSheetsVisible();
+  pushUniforms(); drawLegend();
+});
+
+// colormap floor text box: value in V/m (E) or µT (B), stored per mode
+const loInput = document.getElementById('loInput');
+function syncLoInput() {
+  const isE = state.mode === 'E';
+  document.getElementById('loUnit').textContent = isE ? 'V/m' : 'µT';
+  loInput.min = isE ? 10 : 0.01;   // E: 10 V/m .. 100 kV/m,  B: 0.01 µT .. 100 µT
+  loInput.max = isE ? 100000 : 100;
+  loInput.step = 'any';
+  const v = isE ? 10 ** state.eLoExp : 10 ** state.bLoExp * 1e6;
+  loInput.value = Number(v.toPrecision(3));
+}
+loInput.addEventListener('change', () => {
+  const isE = state.mode === 'E';
+  let v = parseFloat(loInput.value);
+  if (!isFinite(v) || v <= 0) { syncLoInput(); return; }
+  v = Math.min(Math.max(v, parseFloat(loInput.min)), parseFloat(loInput.max));
+  if (isE) state.eLoExp = Math.log10(v);
+  else state.bLoExp = Math.log10(v * 1e-6);   // µT -> T
+  syncLoInput();
+  pushUniforms(); drawLegend();
+});
+syncLoInput();
+
+document.getElementById('arrowsChk').addEventListener('change', e => {
+  state.showArrows = e.target.checked;
+  applyVectorVisibility();
+});
+const planeChk = document.getElementById('planeChk');
+const btnPlane = document.getElementById('btnPlane');
+// the cross-section position + opacity sliders only make sense with the plane on
+function syncPlaneCtls() {
+  const isXY = state.planeOrient === 'XY';
+  document.querySelectorAll('.plane-ctl').forEach(el => {
+    const fits = el.classList.contains('xy-ctl') ? isXY : el.classList.contains('xz-ctl') ? !isXY : true;
+    el.style.display = state.showPlane && fits ? '' : 'none';
+  });
+}
+function syncPlanes() {
+  fieldPlane.visible = state.showPlane && state.planeOrient === 'XY';
+  groundPlane.visible = state.showPlane && state.planeOrient === 'XZ';
+  applyVectorVisibility();          // the in-plane arrows belong to the XY plane
+  syncPlaneCtls();
+}
+function setPlane(on) {
+  state.showPlane = on;
+  planeChk.checked = on;
+  btnPlane.classList.toggle('active', on);   // keep the modeBox pill in sync
+  syncPlanes();
+}
+const btnXY = document.getElementById('btnXY'), btnXZ = document.getElementById('btnXZ');
+function setOrient(o) {
+  state.planeOrient = o;
+  btnXY.classList.toggle('active', o === 'XY');
+  btnXZ.classList.toggle('active', o === 'XZ');
+  syncPlanes();
+}
+btnXY.addEventListener('click', () => setOrient('XY'));
+btnXZ.addEventListener('click', () => setOrient('XZ'));
+planeChk.addEventListener('change', e => setPlane(e.target.checked));
+btnPlane.addEventListener('click', () => setPlane(!state.showPlane));
+syncPlaneCtls();
+document.getElementById('cloudChk').addEventListener('change', e => {
+  state.showVolArrows = e.target.checked;
+  applyVectorVisibility();
+});
+document.getElementById('sheetsChk').addEventListener('change', e => {
+  state.showSheets = e.target.checked;
+  syncSheetsVisible();
+});
+document.getElementById('zeroChk').addEventListener('change', e => {
+  state.showZero = e.target.checked;
+  fieldUniforms.uShowZero.value = state.showZero ? 1 : 0;   // 3D sheet updates next frame
+});
+// bottom chips: field profile chart and phasor clock
+// on small screens the expanded Configuration sheet and these boxes are mutually
+// exclusive — opening one side closes the other
+const isMobile = () => innerWidth <= 700 || innerHeight <= 540;
+const phasorBox = document.getElementById('phasorBox');
+const chartBoxEl = document.getElementById('chartBox');
+const chipChartEl = document.getElementById('chipChart');
+const chipPhasorEl = document.getElementById('chipPhasor');
+function setBox(boxEl, chip, show) {
+  boxEl.style.display = show ? 'block' : 'none';
+  chip.classList.toggle('active', show);
+}
+function wireChip(chip, boxEl) {
+  chip.addEventListener('click', () => {
+    const show = boxEl.style.display === 'none';
+    if (show && isMobile()) panelEl.classList.add('collapsed');
+    setBox(boxEl, chip, show);
+  });
+}
+wireChip(chipChartEl, chartBoxEl);
+wireChip(chipPhasorEl, phasorBox);
+
+// auto-rotate the camera around the scene (OrbitControls; controls.update() runs each frame)
+// enabled by default
+controls.autoRotateSpeed = 0.5;
+controls.autoRotate = true;
+const chipRotateEl = document.getElementById('chipRotate');
+chipRotateEl.classList.add('active');
+chipRotateEl.addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate;
+  chipRotateEl.classList.toggle('active', controls.autoRotate);
+});
+
+// ---------------------------------------------------------------- cinematic fly-through
+// A smooth, continuously looping camera path for screen recording. Position and
+// look-at keyframes are interpolated as closed Catmull-Rom splines so the motion
+// glides through establishing shots, a low pass down the corridor, and high arcs
+// around the tower with no hard cuts.
+const CINE_DUR = 42;              // seconds for one full loop (slow = cinematic)
+const V3 = a => new THREE.Vector3(a[0], a[1], a[2]);
+const cinePos = new THREE.CatmullRomCurve3([
+  [200, 82, 246], [122, 34, 60], [16, 20, 214], [-72, 42, 150],
+  [-192, 92, 118], [-92, 30, -124], [122, 60, -162],
+].map(V3), true, 'catmullrom', 0.5);
+const cineTgt = new THREE.CatmullRomCurve3([
+  [0, 24, 0], [0, 24, -30], [0, 22, -260], [0, 26, -40],
+  [0, 30, -20], [0, 24, 40], [0, 26, 20],
+].map(V3), true, 'catmullrom', 0.5);
+let cineT = 0;
+const _cineTgt = new THREE.Vector3();
+function updateCinematic(dt) {
+  cineT = (cineT + dt / CINE_DUR) % 1;
+  cinePos.getPoint(cineT, camera.position);
+  cineTgt.getPoint(cineT, _cineTgt);
+  camera.lookAt(_cineTgt);
+}
+const chipCineEl = document.getElementById('chipCine');
+const cineChk = document.getElementById('cineChk');
+// one entry point for both controls: the desktop chip and the mobile menu checkbox
+function setCinematic(on) {
+  state.cinematic = on;
+  chipCineEl.classList.toggle('active', on);
+  cineChk.checked = on;
+  if (on) {
+    controls.enabled = false;               // hand the camera to the scripted path
+    controls.autoRotate = false;
+    chipRotateEl.classList.remove('active');
+    cineT = 0;
+  } else {
+    controls.enabled = true;                // hand it back where the fly-through left off
+    cineTgt.getPoint(cineT, controls.target);
+    controls.update();
+  }
+}
+chipCineEl.addEventListener('click', () => setCinematic(!state.cinematic));
+cineChk.addEventListener('change', e => setCinematic(e.target.checked));
+
+// keyboard shortcuts: v = vectors, c = contours, e = E field, b = B field,
+// p = cross-section plane (2D)
+addEventListener('keydown', e => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  switch (e.key.toLowerCase()) {
+    case 'v': btnVec.click(); break;
+    case 'c': btnPot.click(); break;
+    case 'e': setMode('E'); break;
+    case 'b': setMode('B'); break;
+    case 'p': setPlane(!state.showPlane); break;
+    case '1': toggleArrowField('E'); break;
+    case '2': toggleArrowField('B'); break;
+    case '3': toggleArrowField('S'); break;
+    case 'x': setOrient(state.planeOrient === 'XY' ? 'XZ' : 'XY'); break;
+    default: return;
+  }
+});
+
+// probe height: shared by the field profile chart and the XZ plane (no re-solve
+// needed); the chart's vertical slider and the panel slider stay in sync
+const probeSlider = document.getElementById('probeSlider');
+const phSlider = document.getElementById('phSlider');
+function setProbeH(v) {
+  state.probeH = v;
+  probeSlider.value = phSlider.value = v;
+  const txt = v.toFixed(2) + ' m';
+  document.getElementById('probeVal').textContent = txt;
+  document.getElementById('phVal').textContent = txt;
+  paintSlider(probeSlider, true);
+  paintSlider(phSlider);
+  placeGroundPlane();
+  drawChart();
+}
+probeSlider.addEventListener('input', () => setProbeH(parseFloat(probeSlider.value)));
+phSlider.addEventListener('input', () => setProbeH(parseFloat(phSlider.value)));
+document.getElementById('shieldChk').addEventListener('change', e => {
+  state.shieldWires = e.target.checked;
+  refreshAll();
+});
+
+// collapsible parameter panel (starts collapsed on small screens)
+const panelEl = document.getElementById('panel');
+document.getElementById('panelHead').addEventListener('click', () => {
+  const opening = panelEl.classList.contains('collapsed');
+  panelEl.classList.toggle('collapsed');
+  if (opening && isMobile()) {
+    setBox(chartBoxEl, chipChartEl, false);
+    setBox(phasorBox, chipPhasorEl, false);
+  }
+});
+if (isMobile()) {
+  panelEl.classList.add('collapsed');
+  setBox(chartBoxEl, chipChartEl, false);   // start clean on small screens
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------------------------------------------------------------- animation loop
+let theta = 0;
+let avgFrameMs = 0;
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  avgFrameMs = avgFrameMs * 0.95 + dt * 1000 * 0.05;
+  theta += 2 * Math.PI * state.visHz * dt;
+  const cosT = Math.cos(theta), sinT = Math.sin(theta);
+  fieldUniforms.uCosT.value = cosT;
+  fieldUniforms.uSinT.value = sinT;
+  for (const m of ARROW_FIELDS) {
+    if (arrowSets[m].plane.visible) updateArrows(cosT, sinT, m);
+    if (arrowSets[m].vol.visible) updateVolArrows(cosT, sinT, m);
+  }
+  if (sheets.visible) updateSheets(cosT, sinT);
+  if (phasorBox.style.display !== 'none') drawPhasors(theta);
+  if (state.cinematic) updateCinematic(dt);
+  else controls.update();
+  renderer.render(scene, camera);
+}
+
+refreshAll();
+setProbeH(state.probeH);
+applyVectorVisibility();
+animate();
+window.__viz = { camera, controls, state, geom,
+  lattice: () => ({ arrowPts, volPts, conductors, conductorsMid }),
+  debug: () => ({ fieldExtent, planeScaleX: +fieldPlane.scale.x.toFixed(3),
+                  arrowXmax: Math.max(...arrowPts.map(p => p.x)), volXmax: Math.max(...volPts.map(p => p.x)),
+                  nPlanePts: arrowPts.length, nVolPts: volPts.length,
+                  nPlaneArrows: N_ARROWS * 2, nVolArrows: N_VOL,
+                  sheetsVisible: sheets.visible, sheetSegs: sheetGeo.drawRange.count / 6,
+                  bundleOffs: bundleOffsets().map(o => o.map(v => +v.toFixed(3))),
+                  potScale: fieldUniforms.uPotScale.value,
+                  avgFrameMs: +avgFrameMs.toFixed(2) }),
+  stepSheets: (c = 1, s = 0) => { const t0 = performance.now(); updateSheets(c, s);
+    return { segs: sheetGeo.drawRange.count / 6, ms: +(performance.now() - t0).toFixed(2) }; } };
+
+// ---------------------------------------------------------------- guided tour
+const TOUR_KEY = 'powerviz.tourDone';
+const tourDim = document.getElementById('tourDim');
+const tourRing = document.getElementById('tourRing');
+const tourCard = document.getElementById('tourCard');
+
+const tourSteps = [
+  { title: 'Welcome! ⚡', target: null,
+    text: 'A live 3D visualization of the electric and magnetic fields around a three-phase transmission line — solved from real physics in your browser and animated at a slowed-down 60 Hz.' },
+  { title: 'E field vs B field', target: '#modeBox',
+    text: 'Switch what you see. The top row picks the color map: E scales with voltage, B with current. The second row switches arrow layers on and off independently — turn on E and B arrows together to see them cross at right angles, and add S = E×H to watch the power flowing along the line.' },
+  { title: 'Color scale', target: '#legend',
+    text: 'The magnitude scale for the colored cross-section plane. It is logarithmic: from a weak field far away up to the intense field at the conductor surfaces.' },
+  { title: 'Explore in 3D', target: null,
+    text: 'Drag with one finger to orbit and pinch to zoom (on PC: drag, scroll, right-drag to pan). Look down the corridor to see the field arrows repeat along the whole line.' },
+  { title: 'Quick panels', target: '#chips',
+    text: 'These buttons open the field profile chart and the three-phase phasor clock. The ? replays this tour.' },
+  { title: 'Field profile', target: '#chartBox',
+    text: 'RMS field versus lateral distance at a probe height. Drag the small vertical slider to change the height — it starts at 1 m, the standard for EMF studies.',
+    enter() { this._was = chartBoxEl.style.display !== 'none';
+              if (isMobile()) panelEl.classList.add('collapsed');
+              setBox(chartBoxEl, chipChartEl, true); },
+    leave() { if (!this._was) setBox(chartBoxEl, chipChartEl, false); } },
+  { title: 'Configuration', target: '#panel',
+    text: 'Everything about the line lives here: voltage, current, spacing, height, sag, bundle geometry, shield wires — and the field plane: a vertical cross-section (XY) you can slide along the span, or a horizontal ground-level map (XZ) at the probe height.',
+    enter() {
+      this._wasCollapsed = panelEl.classList.contains('collapsed');
+      this._chartWas = chartBoxEl.style.display !== 'none';
+      this._phasorWas = phasorBox.style.display !== 'none';
+      panelEl.classList.remove('collapsed');
+      if (isMobile()) { setBox(chartBoxEl, chipChartEl, false); setBox(phasorBox, chipPhasorEl, false); }
+    },
+    leave() {
+      if (this._wasCollapsed) panelEl.classList.add('collapsed');
+      if (isMobile()) { setBox(chartBoxEl, chipChartEl, this._chartWas); setBox(phasorBox, chipPhasorEl, this._phasorWas); }
+    } },
+  { title: 'You are set! 🎉', target: null,
+    text: 'Try it: raise the current and watch B grow while E stays put — or add subconductors and watch the surface field relax. Replay this tour anytime with the ? button.' },
+];
+
+let tourIdx = -1;
+
+function positionTour() {
+  if (tourIdx < 0) return;
+  const step = tourSteps[tourIdx];
+  const vw = innerWidth, vh = innerHeight;
+  tourCard.style.width = Math.min(360, vw - 24) + 'px';
+  const ch = tourCard.offsetHeight, cw = tourCard.offsetWidth;
+  const el = step.target && document.querySelector(step.target);
+  if (el) {
+    const r = el.getBoundingClientRect();
+    tourDim.style.display = 'none';
+    tourRing.style.display = 'block';
+    tourRing.style.left = (r.left - 6) + 'px';
+    tourRing.style.top = (r.top - 6) + 'px';
+    tourRing.style.width = (r.width + 12) + 'px';
+    tourRing.style.height = (r.height + 12) + 'px';
+    if (r.top + r.height / 2 < vh / 2) {           // target in top half -> card below
+      tourCard.style.top = Math.max(12, Math.min(r.bottom + 16, vh - ch - 12)) + 'px';
+      tourCard.style.bottom = 'auto';
+    } else {                                        // target in bottom half -> card above
+      tourCard.style.bottom = Math.max(12, Math.min(vh - r.top + 16, vh - ch - 12)) + 'px';
+      tourCard.style.top = 'auto';
+    }
+    const cx = r.left + r.width / 2;
+    tourCard.style.left = Math.max(12, Math.min(cx - cw / 2, vw - cw - 12)) + 'px';
+  } else {
+    tourRing.style.display = 'none';
+    tourDim.style.display = 'block';
+    tourCard.style.top = Math.max(12, (vh - ch) / 2) + 'px';
+    tourCard.style.bottom = 'auto';
+    tourCard.style.left = Math.max(12, (vw - cw) / 2) + 'px';
+  }
+}
+
+function showTourStep(i) {
+  if (tourIdx >= 0 && tourSteps[tourIdx].leave) tourSteps[tourIdx].leave();
+  tourIdx = i;
+  const step = tourSteps[i];
+  if (step.enter) step.enter();
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourText').textContent = step.text;
+  document.getElementById('tourStepNum').textContent = (i + 1) + ' / ' + tourSteps.length;
+  document.getElementById('tourBack').disabled = i === 0;
+  document.getElementById('tourNext').textContent = i === tourSteps.length - 1 ? 'Done' : 'Next';
+  tourCard.style.display = 'block';
+  positionTour();                        // sync: rAF can be suspended in hidden tabs
+  requestAnimationFrame(positionTour);   // and again after enter() layout settles
+}
+
+function endTour() {
+  if (tourIdx >= 0 && tourSteps[tourIdx].leave) tourSteps[tourIdx].leave();
+  tourIdx = -1;
+  tourDim.style.display = tourRing.style.display = tourCard.style.display = 'none';
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch {}
+}
+
+document.getElementById('tourNext').addEventListener('click', () =>
+  tourIdx === tourSteps.length - 1 ? endTour() : showTourStep(tourIdx + 1));
+document.getElementById('tourBack').addEventListener('click', () =>
+  tourIdx > 0 && showTourStep(tourIdx - 1));
+document.getElementById('tourSkip').addEventListener('click', endTour);
+document.getElementById('chipTour').addEventListener('click', () => showTourStep(0));
+addEventListener('resize', () => requestAnimationFrame(positionTour));
+
+let tourSeen = false;
+try { tourSeen = !!localStorage.getItem(TOUR_KEY); } catch {}
+if (!tourSeen) setTimeout(() => showTourStep(0), 800);
+</script>
+</body>
+</html>
